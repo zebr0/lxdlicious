@@ -1,0 +1,62 @@
+#!/usr/bin/python3 -u
+
+import requests_unixsocket
+
+url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
+networks_url = url + "/1.0/networks"
+profiles_url = url + "/1.0/profiles"
+containers_url = url + "/1.0/containers"
+
+session = requests_unixsocket.Session()
+
+
+def wait(response):
+    if response.json().get("type") == "async":
+        session.get(url + response.json().get("operation") + "/wait")
+
+
+def network(project, address):
+    wait(session.post(networks_url, json={
+        "name": project + "0",
+        "config": {
+            "ipv4.address": address,
+            "ipv4.nat": "true",
+            "ipv6.address": "none",
+            "dns.mode": "dynamic",
+            "dns.domain": project
+        }
+    }))
+
+
+def profile(project):
+    wait(session.post(profiles_url, json={
+        "name": project,
+        "devices": {
+            "eth0": {
+                "type": "nic",
+                "nictype": "bridged",
+                "parent": project + "0"
+            }
+        }
+    }))
+
+
+def container(type, project, stage):
+    wait(session.post(containers_url, json={
+        "name": "-".join([type, project, stage]),
+        "profiles": ["default", project],
+        "source": {
+            "type": "image",
+            "properties": {
+                "os": "ubuntu",
+                "release": "xenial",
+            }
+        }
+    }))
+
+
+network("torii", "10.42.1.1/24")
+profile("torii")
+container("postgresql", "torii", "alpha")
+
+session.close()
