@@ -42,8 +42,10 @@ def profile(project):
 
 
 def container(type, project, stage):
+    name = "-".join([type, project, stage])
+
     wait(session.post(containers_url, json={
-        "name": "-".join([type, project, stage]),
+        "name": name,
         "profiles": ["default", project],
         "source": {
             "type": "image",
@@ -52,6 +54,10 @@ def container(type, project, stage):
                 "release": "xenial",
             }
         }
+    }))
+
+    wait(session.put(containers_url + "/" + name + "/state", json={
+        "action": "start",
     }))
 
 
