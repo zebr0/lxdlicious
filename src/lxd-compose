@@ -6,23 +6,27 @@ base_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 session = requests_unixsocket.Session()
 
 
-class Network:
-    networks_url = "/1.0/networks"
-
-    def __init__(self, project, config):
-        self._name = project + "0"
-        self._address = config.get("network_address")
-        self._domain = project
+class Resource:
+    def __init__(self, url, name):
+        self._url = url
+        self._name = name
 
     def exists(self):
         return any(filter(
-            lambda a: a == self.networks_url + "/" + self._name,
-            session.get(base_url + self.networks_url).json().get("metadata")
+            lambda a: a == self._url + "/" + self._name,
+            session.get(base_url + self._url).json().get("metadata")
         ))
+
+
+class Network(Resource):
+    def __init__(self, project, config):
+        super().__init__("/1.0/networks", project + "0")
+        self._address = config.get("network_address")
+        self._domain = project
 
     def create(self):
         if not self.exists():
-            session.post(base_url + self.networks_url, json={
+            session.post(base_url + self._url, json={
                 "name": self._name,
                 "config": {
                     "ipv4.address": self._address,
@@ -36,22 +40,14 @@ class Network:
                 raise Exception
 
 
-class Profile:
-    profiles_url = "/1.0/profiles"
-
+class Profile(Resource):
     def __init__(self, project):
-        self._name = project
+        super().__init__("/1.0/profiles", project)
         self._network = project + "0"
-
-    def exists(self):
-        return any(filter(
-            lambda a: a == self.profiles_url + "/" + self._name,
-            session.get(base_url + self.profiles_url).json().get("metadata")
-        ))
 
     def create(self):
         if not self.exists():
-            session.post(base_url + self.profiles_url, json={
+            session.post(base_url + self._url, json={
                 "name": self._name,
                 "devices": {
                     "eth0": {
