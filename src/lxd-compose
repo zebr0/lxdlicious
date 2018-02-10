@@ -7,32 +7,38 @@ session = requests_unixsocket.Session()
 
 
 class Resource:
-    def __init__(self, url, name):
-        self._url = url
+    def __init__(self, collection_url, name):
+        self._collection_url = collection_url
         self._name = name
+
+    def get_full_collection_url(self):
+        return base_url + self._collection_url
+
+    def get_full_element_url(self):
+        return self.get_full_collection_url() + "/" + self._name
 
     def exists(self):
         return any(filter(
-            lambda a: a == self._url + "/" + self._name,
-            session.get(base_url + self._url).json().get("metadata")
+            lambda a: a == self._collection_url + "/" + self._name,
+            session.get(self.get_full_collection_url()).json().get("metadata")
         ))
 
     def _create_sync(self, json):
         if not self.exists():
-            session.post(base_url + self._url, json=json)
+            session.post(self.get_full_collection_url(), json=json)
             if not self.exists():
                 raise Exception
 
     def _create_async(self, json):
         if not self.exists():
-            response = session.post(base_url + self._url, json=json)
+            response = session.post(self.get_full_collection_url(), json=json)
             session.get(base_url + response.json().get("operation") + "/wait")
             if not self.exists():
                 raise Exception
 
     def delete(self):
         if self.exists():
-            session.delete(base_url + self._url + "/" + self._name)
+            session.delete(self.get_full_element_url())
             if self.exists():
                 raise Exception
 
@@ -79,7 +85,7 @@ class Container(Resource):
         super().__init__("/1.0/containers", name)
 
     def is_running(self):
-        return self.exists() and session.get(base_url + self._url + "/" + self._name).json().get("metadata").get(
+        return self.exists() and session.get(self.get_full_element_url()).json().get("metadata").get(
             "status") == "Running"
 
     def start(self):
@@ -87,7 +93,7 @@ class Container(Resource):
             raise Exception
 
         if not self.is_running():
-            response = session.put(base_url + self._url + "/" + self._name + "/state", json={"action": "start"})
+            response = session.put(self.get_full_element_url() + "/state", json={"action": "start"})
             session.get(base_url + response.json().get("operation") + "/wait")
             if not self.is_running():
                 raise Exception
