@@ -6,6 +6,10 @@ base_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 session = requests_unixsocket.Session()
 
 
+def wait(response):
+    session.get(base_url + response.json().get("operation") + "/wait")
+
+
 class Resource:
     def __init__(self, collection_url, name):
         self._collection_url = collection_url
@@ -31,8 +35,7 @@ class Resource:
 
     def _create_async(self, json):
         if not self.exists():
-            response = session.post(self.get_full_collection_url(), json=json)
-            session.get(base_url + response.json().get("operation") + "/wait")
+            wait(session.post(self.get_full_collection_url(), json=json))
             if not self.exists():
                 raise Exception
 
@@ -93,8 +96,7 @@ class Container(Resource):
             raise Exception
 
         if not self.is_running():
-            response = session.put(self.get_full_element_url() + "/state", json={"action": "start"})
-            session.get(base_url + response.json().get("operation") + "/wait")
+            wait(session.put(self.get_full_element_url() + "/state", json={"action": "start"}))
             if not self.is_running():
                 raise Exception
 
