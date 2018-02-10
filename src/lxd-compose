@@ -17,6 +17,12 @@ class Resource:
             session.get(base_url + self._url).json().get("metadata")
         ))
 
+    def _create(self, json):
+        if not self.exists():
+            session.post(base_url + self._url, json=json)
+            if not self.exists():
+                raise Exception
+
 
 class Network(Resource):
     def __init__(self, project, config):
@@ -25,19 +31,16 @@ class Network(Resource):
         self._domain = project
 
     def create(self):
-        if not self.exists():
-            session.post(base_url + self._url, json={
-                "name": self._name,
-                "config": {
-                    "ipv4.address": self._address,
-                    "ipv4.nat": "true",
-                    "ipv6.address": "none",
-                    "dns.mode": "dynamic",
-                    "dns.domain": self._domain
-                }
-            })
-            if not self.exists():
-                raise Exception
+        super()._create({
+            "name": self._name,
+            "config": {
+                "ipv4.address": self._address,
+                "ipv4.nat": "true",
+                "ipv6.address": "none",
+                "dns.mode": "dynamic",
+                "dns.domain": self._domain
+            }
+        })
 
 
 class Profile(Resource):
@@ -46,19 +49,16 @@ class Profile(Resource):
         self._network = project + "0"
 
     def create(self):
-        if not self.exists():
-            session.post(base_url + self._url, json={
-                "name": self._name,
-                "devices": {
-                    "eth0": {
-                        "type": "nic",
-                        "nictype": "bridged",
-                        "parent": self._network
-                    }
+        super()._create({
+            "name": self._name,
+            "devices": {
+                "eth0": {
+                    "type": "nic",
+                    "nictype": "bridged",
+                    "parent": self._network
                 }
-            })
-            if not self.exists():
-                raise Exception
+            }
+        })
 
 
 project = "torii"
