@@ -23,6 +23,12 @@ class Resource:
             if not self.exists():
                 raise Exception
 
+    def delete(self):
+        if self.exists():
+            session.delete(base_url + self._url + "/" + self._name)
+            if self.exists():
+                raise Exception
+
 
 class Network(Resource):
     def __init__(self, project, config):
