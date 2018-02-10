@@ -2,67 +2,79 @@
 
 import requests_unixsocket
 
-url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
-networks_url = url + "/1.0/networks"
-profiles_url = url + "/1.0/profiles"
-containers_url = url + "/1.0/containers"
-
+base_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 session = requests_unixsocket.Session()
 
 
-def wait(response):
-    if response.json().get("type") == "async":
-        session.get(url + response.json().get("operation") + "/wait")
+class Network:
+    networks_url = "/1.0/networks"
+
+    def __init__(self, project, config):
+        self._name = project + "0"
+        self._address = config.get("network_address")
+        self._domain = project
+
+    def exists(self):
+        return any(filter(
+            lambda a: a == self.networks_url + "/" + self._name,
+            session.get(base_url + self.networks_url).json().get("metadata")
+        ))
+
+    def create(self):
+        if not self.exists():
+            session.post(base_url + self.networks_url, json={
+                "name": self._name,
+                "config": {
+                    "ipv4.address": self._address,
+                    "ipv4.nat": "true",
+                    "ipv6.address": "none",
+                    "dns.mode": "dynamic",
+                    "dns.domain": self._domain
+                }
+            })
+            if not self.exists():
+                raise Exception
 
 
-def network(project, address):
-    wait(session.post(networks_url, json={
-        "name": project + "0",
-        "config": {
-            "ipv4.address": address,
-            "ipv4.nat": "true",
-            "ipv6.address": "none",
-            "dns.mode": "dynamic",
-            "dns.domain": project
-        }
-    }))
+class Profile:
+    profiles_url = "/1.0/profiles"
+
+    def __init__(self, project):
+        self._name = project
+        self._network = project + "0"
+
+    def exists(self):
+        return any(filter(
+            lambda a: a == self.profiles_url + "/" + self._name,
+            session.get(base_url + self.profiles_url).json().get("metadata")
+        ))
+
+    def create(self):
+        if not self.exists():
+            session.post(base_url + self.profiles_url, json={
+                "name": self._name,
+                "devices": {
+                    "eth0": {
+                        "type": "nic",
+                        "nictype": "bridged",
+                        "parent": self._network
+                    }
+                }
+            })
+            if not self.exists():
+                raise Exception
 
 
-def profile(project):
-    wait(session.post(profiles_url, json={
-        "name": project,
-        "devices": {
-            "eth0": {
-                "type": "nic",
-                "nictype": "bridged",
-                "parent": project + "0"
-            }
-        }
-    }))
+project = "torii"
+stage = "alpha"
+config = {
+    "network_address": "10.42.1.1/24",
+    "containers": ["postgresql", "wildfly", "deploy"]
+}
 
-
-def container(type, project, stage):
-    name = "-".join([type, project, stage])
-
-    wait(session.post(containers_url, json={
-        "name": name,
-        "profiles": ["default", project],
-        "source": {
-            "type": "image",
-            "properties": {
-                "os": "ubuntu",
-                "release": "xenial",
-            }
-        }
-    }))
-
-    wait(session.put(containers_url + "/" + name + "/state", json={
-        "action": "start",
-    }))
-
-
-network("torii", "10.42.1.1/24")
-profile("torii")
-container("postgresql", "torii", "alpha")
+network = Network(project, config)
+network.create()
+profile = Profile(project)
+profile.create()
 
 session.close()
