@@ -17,9 +17,16 @@ class Resource:
             session.get(base_url + self._url).json().get("metadata")
         ))
 
-    def _create(self, json):
+    def _create_sync(self, json):
         if not self.exists():
             session.post(base_url + self._url, json=json)
+            if not self.exists():
+                raise Exception
+
+    def _create_async(self, json):
+        if not self.exists():
+            response = session.post(base_url + self._url, json=json)
+            session.get(base_url + response.json().get("operation") + "/wait")
             if not self.exists():
                 raise Exception
 
@@ -37,7 +44,7 @@ class Network(Resource):
         self._domain = project
 
     def create(self):
-        super()._create({
+        super()._create_sync({
             "name": self._name,
             "config": {
                 "ipv4.address": self._address,
@@ -55,7 +62,7 @@ class Profile(Resource):
         self._network = project + "0"
 
     def create(self):
-        super()._create({
+        super()._create_sync({
             "name": self._name,
             "devices": {
                 "eth0": {
