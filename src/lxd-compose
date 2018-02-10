@@ -74,6 +74,54 @@ class Profile(Resource):
         })
 
 
+class Container(Resource):
+    def __init__(self, name):
+        super().__init__("/1.0/containers", name)
+
+
+class ImageContainer(Container):
+    def __init__(self, project):
+        super().__init__(project)
+
+    def create(self):
+        super()._create_async({
+            "name": self._name,
+            "profiles": ["default", "image"],
+            "source": {
+                "type": "image",
+                "properties": {
+                    "os": "ubuntu",
+                    "release": "xenial",
+                }
+            }
+        })
+
+
+class ApplicationContainer(Container):
+    def __init__(self, type, project, stage):
+        super().__init__("-".join([type, project, stage]))
+        self._project = project
+
+    def create(self):
+        super()._create_async({
+            "name": self._name,
+            "profiles": ["default", "container", self._project],
+            "source": {
+                "type": "image",
+                "alias": self._project
+            }
+        })
+
+
+class Image(Resource):
+    def __init__(self, project):
+        super().__init__("/1.0/images", project)
+        self._container = ImageContainer(project)
+
+    def create(self):
+        self._container.create()
+
+
 project = "torii"
 stage = "alpha"
 config = {
@@ -85,5 +133,7 @@ network = Network(project, config)
 network.create()
 profile = Profile(project)
 profile.create()
+image = Image(project)
+image.create()
 
 session.close()
