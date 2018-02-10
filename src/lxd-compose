@@ -78,6 +78,20 @@ class Container(Resource):
     def __init__(self, name):
         super().__init__("/1.0/containers", name)
 
+    def is_running(self):
+        return self.exists() and session.get(base_url + self._url + "/" + self._name).json().get("metadata").get(
+            "status") == "Running"
+
+    def start(self):
+        if not self.exists():
+            raise Exception
+
+        if not self.is_running():
+            response = session.put(base_url + self._url + "/" + self._name + "/state", json={"action": "start"})
+            session.get(base_url + response.json().get("operation") + "/wait")
+            if not self.is_running():
+                raise Exception
+
 
 class ImageContainer(Container):
     def __init__(self, project):
@@ -120,6 +134,7 @@ class Image(Resource):
 
     def create(self):
         self._container.create()
+        self._container.start()
 
 
 project = "torii"
