@@ -1,6 +1,8 @@
 #!/usr/bin/python3 -u
 
+import json
 import time
+import urllib.request
 
 import requests_unixsocket
 
@@ -160,10 +162,8 @@ class Image(Resource):
 
 project = "torii"
 stage = "alpha"
-config = {
-    "network_address": "10.42.1.1/24",
-    "containers": ["postgresql", "wildfly", "deploy"]
-}
+config = json.loads(urllib.request.urlopen(
+    "https://raw.githubusercontent.com/mazerty/lxd-compose-files/master" + "/" + project).read().decode("ascii"))
 
 network = Network(project, config)
 network.create()
