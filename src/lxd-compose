@@ -1,5 +1,7 @@
 #!/usr/bin/python3 -u
 
+import time
+
 import requests_unixsocket
 
 base_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
@@ -21,10 +23,10 @@ class Resource:
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
 
-    def exists(self):
+    def exists(self, url_suffix=""):
         return any(filter(
-            lambda a: a == self._collection_url + "/" + self._name,
-            session.get(self.get_full_collection_url()).json().get("metadata")
+            lambda a: a == self._collection_url + url_suffix + "/" + self._name,
+            session.get(self.get_full_collection_url() + url_suffix).json().get("metadata")
         ))
 
     def _create_sync(self, json):
@@ -100,6 +102,12 @@ class Container(Resource):
             if not self.is_running():
                 raise Exception
 
+    def delete(self):
+        if self.exists():
+            wait(session.delete(self.get_full_element_url()))
+            if self.exists():
+                raise Exception
+
 
 class ImageContainer(Container):
     def __init__(self, project):
@@ -140,9 +148,25 @@ class Image(Resource):
         super().__init__("/1.0/images", project)
         self._container = ImageContainer(project)
 
+    def exists(self, **kwargs):
+        return super().exists("/aliases")
+
     def create(self):
-        self._container.create()
-        self._container.start()
+        if not self.exists():
+            self._container.create()
+            self._container.start()
+            while self._container.is_running():
+                time.sleep(1)
+            wait(session.post(self.get_full_collection_url(), json={
+                "aliases": [{"name": self._name}],
+                "source": {
+                    "type": "container",
+                    "name": self._name
+                }
+            }))
+            self._container.delete()
+            if not self.exists() or self._container.exists():
+                raise Exception
 
 
 project = "torii"
