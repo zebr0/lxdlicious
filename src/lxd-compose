@@ -4,13 +4,13 @@ import time
 
 import requests_unixsocket
 
-base_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
+api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 session = requests_unixsocket.Session()
 
 
 def wait(response):
     if response.json().get("type") == "async":
-        session.get(base_url + response.json().get("operation") + "/wait")
+        session.get(api_url + response.json().get("operation") + "/wait")
 
 
 class Resource:
@@ -19,7 +19,7 @@ class Resource:
         self._name = name
 
     def get_full_collection_url(self):
-        return base_url + self._collection_url
+        return api_url + self._collection_url
 
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
