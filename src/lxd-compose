@@ -171,5 +171,9 @@ profile = Profile(project)
 profile.create()
 image = Image(project)
 image.create()
+for type in config.get("containers"):
+    container = ApplicationContainer(type, project, stage)
+    container.create()
+    container.start()
 
 session.close()
