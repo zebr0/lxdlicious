@@ -9,7 +9,8 @@ session = requests_unixsocket.Session()
 
 
 def wait(response):
-    session.get(base_url + response.json().get("operation") + "/wait")
+    if response.json().get("type") == "async":
+        session.get(base_url + response.json().get("operation") + "/wait")
 
 
 class Resource:
@@ -29,13 +30,7 @@ class Resource:
             session.get(self.get_full_collection_url() + url_suffix).json().get("metadata")
         ))
 
-    def _create_sync(self, json):
-        if not self.exists():
-            session.post(self.get_full_collection_url(), json=json)
-            if not self.exists():
-                raise Exception
-
-    def _create_async(self, json):
+    def _create(self, json):
         if not self.exists():
             wait(session.post(self.get_full_collection_url(), json=json))
             if not self.exists():
@@ -43,7 +38,7 @@ class Resource:
 
     def delete(self):
         if self.exists():
-            session.delete(self.get_full_element_url())
+            wait(session.delete(self.get_full_element_url()))
             if self.exists():
                 raise Exception
 
@@ -55,7 +50,7 @@ class Network(Resource):
         self._domain = project
 
     def create(self):
-        super()._create_sync({
+        super()._create({
             "name": self._name,
             "config": {
                 "ipv4.address": self._address,
@@ -73,7 +68,7 @@ class Profile(Resource):
         self._network = project + "0"
 
     def create(self):
-        super()._create_sync({
+        super()._create({
             "name": self._name,
             "devices": {
                 "eth0": {
@@ -102,19 +97,13 @@ class Container(Resource):
             if not self.is_running():
                 raise Exception
 
-    def delete(self):
-        if self.exists():
-            wait(session.delete(self.get_full_element_url()))
-            if self.exists():
-                raise Exception
-
 
 class ImageContainer(Container):
     def __init__(self, project):
         super().__init__(project)
 
     def create(self):
-        super()._create_async({
+        super()._create({
             "name": self._name,
             "profiles": ["default", "image"],
             "source": {
@@ -133,7 +122,7 @@ class ApplicationContainer(Container):
         self._project = project
 
     def create(self):
-        super()._create_async({
+        super()._create({
             "name": self._name,
             "profiles": ["default", "container", self._project],
             "source": {
