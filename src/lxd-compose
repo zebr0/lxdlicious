@@ -1,5 +1,6 @@
 #!/usr/bin/python3 -u
 
+import argparse
 import json
 import time
 import urllib.request
@@ -160,20 +161,32 @@ class Image(Resource):
                 raise Exception
 
 
-project = "torii"
-stage = "alpha"
-config = json.loads(urllib.request.urlopen(
-    "https://raw.githubusercontent.com/mazerty/lxd-compose-files/master" + "/" + project).read().decode("ascii"))
+def run(args):
+    config = json.loads(urllib.request.urlopen(
+        "https://raw.githubusercontent.com/mazerty/lxd-compose-files/master" + "/" + args.project).read().decode(
+        "ascii"))
 
-network = Network(project, config)
-network.create()
-profile = Profile(project)
-profile.create()
-image = Image(project)
-image.create()
-for type in config.get("containers"):
-    container = ApplicationContainer(type, project, stage)
-    container.create()
-    container.start()
+    network = Network(args.project, config)
+    network.create()
+    profile = Profile(args.project)
+    profile.create()
+    image = Image(args.project)
+    image.create()
+    for type in config.get("containers"):
+        container = ApplicationContainer(type, args.project, args.stage)
+        container.create()
+        container.start()
+
+
+argparser = argparse.ArgumentParser()
+subparsers = argparser.add_subparsers()
+
+parser_run = subparsers.add_parser("run")
+parser_run.add_argument("project", nargs="?")
+parser_run.add_argument("stage", nargs="?")
+parser_run.set_defaults(func=run)
+
+args = argparser.parse_args()
+args.func(args)
 
 session.close()
