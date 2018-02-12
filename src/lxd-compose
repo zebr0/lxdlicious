@@ -8,9 +8,6 @@ import urllib.request
 
 import requests_unixsocket
 
-api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
-session = requests_unixsocket.Session()
-
 
 # handles the configuration
 class Configuration:
@@ -22,17 +19,22 @@ class Configuration:
         self._base_url = parser.get("config", "base_url",
                                     fallback="https://raw.githubusercontent.com/mazerty/lxd-compose-files/master")
 
+        self._api_url = parser.get("config", "api_url", fallback="http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket")
+
     def get_project_config(self, project):
         return json.loads(urllib.request.urlopen(self._base_url + "/" + project).read().decode("ascii"))
+
+    def get_api_url(self): return self._api_url
 
 
 # reads the configuration for the rest of the script
 config = Configuration()
+session = requests_unixsocket.Session()
 
 
 def wait(response):
     if response.json().get("type") == "async":
-        session.get(api_url + response.json().get("operation") + "/wait")
+        session.get(config.get_api_url() + response.json().get("operation") + "/wait")
 
 
 class Resource:
@@ -41,7 +43,7 @@ class Resource:
         self._name = name
 
     def get_full_collection_url(self):
-        return api_url + self._collection_url
+        return config.get_api_url() + self._collection_url
 
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
