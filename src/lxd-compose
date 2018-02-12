@@ -100,6 +100,15 @@ class Container(Resource):
             if not self.is_running():
                 raise Exception
 
+    def stop(self):
+        if not self.exists():
+            raise Exception
+
+        if self.is_running():
+            wait(session.put(self.get_full_element_url() + "/state", json={"action": "stop"}))
+            if self.is_running():
+                raise Exception
+
 
 class ImageContainer(Container):
     def __init__(self, project):
@@ -178,6 +187,16 @@ def run(args):
         container.start()
 
 
+def stop(args):
+    config = json.loads(urllib.request.urlopen(
+        "https://raw.githubusercontent.com/mazerty/lxd-compose-files/master" + "/" + args.project).read().decode(
+        "ascii"))
+
+    for type in config.get("containers"):
+        container = ApplicationContainer(type, args.project, args.stage)
+        container.stop()
+
+
 argparser = argparse.ArgumentParser()
 subparsers = argparser.add_subparsers()
 
@@ -185,6 +204,11 @@ parser_run = subparsers.add_parser("run")
 parser_run.add_argument("project", nargs="?")
 parser_run.add_argument("stage", nargs="?")
 parser_run.set_defaults(func=run)
+
+parser_stop = subparsers.add_parser("stop")
+parser_stop.add_argument("project", nargs="?")
+parser_stop.add_argument("stage", nargs="?")
+parser_stop.set_defaults(func=stop)
 
 args = argparser.parse_args()
 args.func(args)
