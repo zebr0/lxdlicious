@@ -1,6 +1,7 @@
 #!/usr/bin/python3 -u
 
 import argparse
+import configparser
 import json
 import time
 import urllib.request
@@ -9,6 +10,24 @@ import requests_unixsocket
 
 api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 session = requests_unixsocket.Session()
+
+
+# handles the configuration
+class Configuration:
+    def __init__(self):
+        # reads the configuration file first from /etc then from the working directory if present
+        parser = configparser.ConfigParser()
+        parser.read(["/etc/lxd-compose.conf", "lxd-compose.conf"])
+
+        self._base_url = parser.get("config", "base_url",
+                                    fallback="https://raw.githubusercontent.com/mazerty/lxd-compose-files/master")
+
+    def get_project_config(self, project):
+        return json.loads(urllib.request.urlopen(self._base_url + "/" + project).read().decode("ascii"))
+
+
+# reads the configuration for the rest of the script
+config = Configuration()
 
 
 def wait(response):
@@ -171,28 +190,24 @@ class Image(Resource):
 
 
 def run(args):
-    config = json.loads(urllib.request.urlopen(
-        "https://raw.githubusercontent.com/mazerty/lxd-compose-files/master" + "/" + args.project).read().decode(
-        "ascii"))
+    project_config = config.get_project_config(args.project)
 
-    network = Network(args.project, config)
+    network = Network(args.project, project_config)
     network.create()
     profile = Profile(args.project)
     profile.create()
     image = Image(args.project)
     image.create()
-    for type in config.get("containers"):
+    for type in project_config.get("containers"):
         container = ApplicationContainer(type, args.project, args.stage)
         container.create()
         container.start()
 
 
 def stop(args):
-    config = json.loads(urllib.request.urlopen(
-        "https://raw.githubusercontent.com/mazerty/lxd-compose-files/master" + "/" + args.project).read().decode(
-        "ascii"))
+    project_config = config.get_project_config(args.project)
 
-    for type in config.get("containers"):
+    for type in project_config.get("containers"):
         container = ApplicationContainer(type, args.project, args.stage)
         container.stop()
 
