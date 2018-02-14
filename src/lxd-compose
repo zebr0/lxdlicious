@@ -226,6 +226,21 @@ def stop(args):
         container.stop()
 
 
+def delete(args):
+    project_config = config.get_project_config(args.project)
+
+    for type in project_config.get("containers"):
+        container = ApplicationContainer(type, args.project, args.stage)
+        container.stop()
+        container.delete()
+    image = Image(args.project)
+    image.delete()
+    profile = Profile(args.project)
+    profile.delete()
+    network = Network(args.project, project_config)
+    network.delete()
+
+
 argparser = argparse.ArgumentParser()
 subparsers = argparser.add_subparsers()
 
@@ -238,6 +253,11 @@ parser_stop = subparsers.add_parser("stop")
 parser_stop.add_argument("project", nargs="?")
 parser_stop.add_argument("stage", nargs="?")
 parser_stop.set_defaults(func=stop)
+
+parser_delete = subparsers.add_parser("delete")
+parser_delete.add_argument("project", nargs="?")
+parser_delete.add_argument("stage", nargs="?")
+parser_delete.set_defaults(func=delete)
 
 args = argparser.parse_args()
 args.func(args)
