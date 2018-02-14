@@ -48,10 +48,10 @@ class Resource:
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
 
-    def exists(self, url_suffix=""):
+    def exists(self):
         return any(filter(
-            lambda a: a == self._collection_url + url_suffix + "/" + self._name,
-            session.get(self.get_full_collection_url() + url_suffix).json().get("metadata")
+            lambda a: a == self._collection_url + "/" + self._name,
+            session.get(self.get_full_collection_url()).json().get("metadata")
         ))
 
     def _create(self, json):
@@ -165,13 +165,25 @@ class ApplicationContainer(Container):
         })
 
 
+class Alias(Resource):
+    def __init__(self, project):
+        super().__init__("/1.0/images/aliases", project)
+
+    def get_image_id(self):
+        if self.exists():
+            return session.get(self.get_full_element_url()).json().get("metadata").get("target")
+
+
 class Image(Resource):
     def __init__(self, project):
-        super().__init__("/1.0/images", project)
+        super().__init__("/1.0/images", None)
         self._container = ImageContainer(project)
+        self._alias = Alias(project)
 
     def exists(self, **kwargs):
-        return super().exists("/aliases")
+        if self._name is None:
+            self._name = self._alias.get_image_id()
+        return super().exists()
 
     def create(self):
         if not self.exists():
