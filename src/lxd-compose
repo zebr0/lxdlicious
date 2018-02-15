@@ -59,12 +59,14 @@ class Resource:
 
     def _create(self, json):
         if not self.exists():
+            print("creating", self._collection_url, self._name)
             wait(session.post(self.get_full_collection_url(), json=json))
             if not self.exists():
                 raise Exception
 
     def delete(self):
         if self.exists():
+            print("deleting", self._collection_url, self._name)
             wait(session.delete(self.get_full_element_url()))
             if self.exists():
                 raise Exception
@@ -120,6 +122,7 @@ class Container(Resource):
             raise Exception
 
         if not self.is_running():
+            print("starting", self._collection_url, self._name)
             wait(session.put(self.get_full_element_url() + "/state", json={"action": "start"}))
             if not self.is_running():
                 raise Exception
@@ -129,6 +132,7 @@ class Container(Resource):
             raise Exception
 
         if self.is_running():
+            print("stopping", self._collection_url, self._name)
             wait(session.put(self.get_full_element_url() + "/state", json={"action": "stop"}))
             if self.is_running():
                 raise Exception
@@ -193,13 +197,13 @@ class Image(Resource):
             self._container.start()
             while self._container.is_running():
                 time.sleep(1)
-            wait(session.post(self.get_full_collection_url(), json={
+            super()._create({
                 "aliases": [{"name": self._alias.get_name()}],
                 "source": {
                     "type": "container",
                     "name": self._container.get_name()
                 }
-            }))
+            })
             self._container.delete()
             if not self.exists() or self._container.exists():
                 raise Exception
