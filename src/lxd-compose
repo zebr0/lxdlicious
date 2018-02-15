@@ -48,6 +48,9 @@ class Resource:
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
 
+    def get_name(self):
+        return self._name
+
     def exists(self):
         return any(filter(
             lambda a: a == self._collection_url + "/" + self._name,
@@ -170,18 +173,17 @@ class Alias(Resource):
         super().__init__("/1.0/images/aliases", project)
 
     def get_image_id(self):
-        if self.exists():
-            return session.get(self.get_full_element_url()).json().get("metadata").get("target")
+        return session.get(self.get_full_element_url()).json().get("metadata").get("target") if self.exists() else ""
 
 
 class Image(Resource):
     def __init__(self, project):
-        super().__init__("/1.0/images", None)
+        super().__init__("/1.0/images", "")
         self._container = ImageContainer(project)
         self._alias = Alias(project)
 
-    def exists(self, **kwargs):
-        if self._name is None:
+    def exists(self):
+        if not self._name:
             self._name = self._alias.get_image_id()
         return super().exists()
 
@@ -192,10 +194,10 @@ class Image(Resource):
             while self._container.is_running():
                 time.sleep(1)
             wait(session.post(self.get_full_collection_url(), json={
-                "aliases": [{"name": self._name}],
+                "aliases": [{"name": self._alias.get_name()}],
                 "source": {
                     "type": "container",
-                    "name": self._name
+                    "name": self._container.get_name()
                 }
             }))
             self._container.delete()
@@ -203,7 +205,7 @@ class Image(Resource):
                 raise Exception
 
 
-def run(args):
+def create(args):
     project_config = config.get_project_config(args.project)
 
     network = Network(args.project, project_config)
@@ -215,6 +217,13 @@ def run(args):
     for type in project_config.get("containers"):
         container = ApplicationContainer(type, args.project, args.stage)
         container.create()
+
+
+def start(args):
+    project_config = config.get_project_config(args.project)
+
+    for type in project_config.get("containers"):
+        container = ApplicationContainer(type, args.project, args.stage)
         container.start()
 
 
@@ -244,10 +253,15 @@ def delete(args):
 argparser = argparse.ArgumentParser()
 subparsers = argparser.add_subparsers()
 
-parser_run = subparsers.add_parser("run")
-parser_run.add_argument("project", nargs="?")
-parser_run.add_argument("stage", nargs="?")
-parser_run.set_defaults(func=run)
+parser_create = subparsers.add_parser("create")
+parser_create.add_argument("project", nargs="?")
+parser_create.add_argument("stage", nargs="?")
+parser_create.set_defaults(func=create)
+
+parser_start = subparsers.add_parser("start")
+parser_start.add_argument("project", nargs="?")
+parser_start.add_argument("stage", nargs="?")
+parser_start.set_defaults(func=start)
 
 parser_stop = subparsers.add_parser("stop")
 parser_stop.add_argument("project", nargs="?")
