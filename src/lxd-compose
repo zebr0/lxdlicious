@@ -16,11 +16,13 @@ class Configuration:
         parser = configparser.ConfigParser()
         parser.read(["/etc/lxd-compose.conf", "lxd-compose.conf"])
 
+        # base url for the project files
         self._base_url = parser.get("config", "base_url",
                                     fallback="https://raw.githubusercontent.com/mazerty/lxd-compose-files/master")
-
+        # url of the unix socket for the lxd api
         self._api_url = parser.get("config", "api_url", fallback="http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket")
 
+    # returns a dictionary with the project configuration fetched from the base url
     def get_project_config(self, project):
         return json.loads(urllib.request.urlopen(self._base_url + "/" + project).read().decode("ascii"))
 
@@ -29,52 +31,70 @@ class Configuration:
 
 # reads the configuration for the rest of the script
 config = Configuration()
+# opens a unix socket session for the rest of the script
 session = requests_unixsocket.Session()
 
 
+# this function can be used to wait for lxd asynchronous operations to be finished
+# see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
 def wait(response):
     if response.json().get("type") == "async":
         session.get(config.get_api_url() + response.json().get("operation") + "/wait")
 
 
+# parent (abstract) class for all lxd resources
 class Resource:
     def __init__(self, collection_url, name):
+        # relative api url for this type of lxd resource (for example: "/1.0/containers")
         self._collection_url = collection_url
+        # the name of this particular resource
         self._name = name
 
+    # returns the full api url for this type of lxd resource
     def get_full_collection_url(self):
         return config.get_api_url() + self._collection_url
 
+    # returns the full api url for this particular resource
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
 
     def get_name(self):
         return self._name
 
+    # returns whether this particular resource exists or not...
     def exists(self):
+        # by checking if the resource's name is listed in the response of the collection url
         return any(filter(
             lambda a: a == self._collection_url + "/" + self._name,
             session.get(self.get_full_collection_url()).json().get("metadata")
         ))
 
+    # meant to be called by actual "create" functions in child classes with a json template matching the resource's type
+    # handles the basic api resource creation
     def _create(self, json):
+        # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
             print("creating", self._collection_url, self._name)
             wait(session.post(self.get_full_collection_url(), json=json))
             if not self.exists():
-                raise Exception
+                raise Exception("resource creation failed")
 
+    # deletes this particular resource
     def delete(self):
+        # only does something if the resource exists (idempotence)
         if self.exists():
             print("deleting", self._collection_url, self._name)
             wait(session.delete(self.get_full_element_url()))
             if self.exists():
-                raise Exception
+                raise Exception("resource deletion failed")
 
 
 class Network(Resource):
     def __init__(self, project, config):
+        # network names must end with a digit
         super().__init__("/1.0/networks", project + "0")
+
+        # additional attributes
         self._address = config.get("network_address")
         self._domain = project
 
@@ -94,6 +114,8 @@ class Network(Resource):
 class Profile(Resource):
     def __init__(self, project):
         super().__init__("/1.0/profiles", project)
+
+        # additional attribute: reference to the corresponding network
         self._network = project + "0"
 
     def create(self):
@@ -109,33 +131,40 @@ class Profile(Resource):
         })
 
 
+# parent (abstract) class for all lxd containers
 class Container(Resource):
     def __init__(self, name):
         super().__init__("/1.0/containers", name)
 
+    # returns whether this particular container is running or not...
     def is_running(self):
+        # by checking its status in the metadata
         return self.exists() and session.get(self.get_full_element_url()).json().get("metadata").get(
             "status") == "Running"
 
+    # starts this particular container
     def start(self):
         if not self.exists():
-            raise Exception
+            raise Exception("container starting failed: container must exist")
 
+        # only does something if the resource isn't already running (idempotence)
         if not self.is_running():
             print("starting", self._collection_url, self._name)
             wait(session.put(self.get_full_element_url() + "/state", json={"action": "start"}))
             if not self.is_running():
-                raise Exception
+                raise Exception("container starting failed")
 
+    # stops this particular container
     def stop(self):
         if not self.exists():
-            raise Exception
+            raise Exception("container stopping failed: container must exist")
 
+        # only does something if the resource is running (idempotence)
         if self.is_running():
             print("stopping", self._collection_url, self._name)
             wait(session.put(self.get_full_element_url() + "/state", json={"action": "stop"}))
             if self.is_running():
-                raise Exception
+                raise Exception("container stopping failed")
 
 
 class ImageContainer(Container):
