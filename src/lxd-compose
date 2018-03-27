@@ -3,7 +3,6 @@
 import argparse
 import configparser
 import json
-import time
 import urllib.request
 
 import requests_unixsocket
@@ -131,10 +130,26 @@ class Profile(Resource):
         })
 
 
-# parent (abstract) class for all lxd containers
 class Container(Resource):
-    def __init__(self, name):
-        super().__init__("/1.0/containers", name)
+    def __init__(self, type, project, stage):
+        # the container name is a concatenation of its type, the project name and the deployment stage
+        super().__init__("/1.0/containers", "-".join([type, project, stage]))
+
+        # additional attribute: reference to the project's profile
+        self._profile = project
+
+    def create(self):
+        super()._create({
+            "name": self._name,
+            "profiles": ["default", "compose", self._profile],
+            "source": {
+                "type": "image",
+                "properties": {
+                    "os": "ubuntu",
+                    "release": "xenial",
+                }
+            }
+        })
 
     # returns whether this particular container is running or not...
     def is_running(self):
@@ -167,77 +182,6 @@ class Container(Resource):
                 raise Exception("container stopping failed")
 
 
-class ImageContainer(Container):
-    def __init__(self, project):
-        super().__init__(project)
-
-    def create(self):
-        super()._create({
-            "name": self._name,
-            "profiles": ["default", "image"],
-            "source": {
-                "type": "image",
-                "properties": {
-                    "os": "ubuntu",
-                    "release": "xenial",
-                }
-            }
-        })
-
-
-class ApplicationContainer(Container):
-    def __init__(self, type, project, stage):
-        super().__init__("-".join([type, project, stage]))
-        self._project = project
-
-    def create(self):
-        super()._create({
-            "name": self._name,
-            "profiles": ["default", "container", self._project],
-            "source": {
-                "type": "image",
-                "alias": self._project
-            }
-        })
-
-
-class Alias(Resource):
-    def __init__(self, project):
-        super().__init__("/1.0/images/aliases", project)
-
-    def get_image_id(self):
-        return session.get(self.get_full_element_url()).json().get("metadata").get("target") if self.exists() else ""
-
-
-class Image(Resource):
-    def __init__(self, project):
-        super().__init__("/1.0/images", "")
-        self._container = ImageContainer(project)
-        self._alias = Alias(project)
-
-    def exists(self):
-        if not self._name:
-            self._name = self._alias.get_image_id()
-        return super().exists()
-
-    def create(self):
-        if not self.exists():
-            self._container.create()
-            self._container.start()
-            while self._container.is_running():
-                time.sleep(1)
-            super()._create({
-                "aliases": [{"name": self._alias.get_name()}],
-                "source": {
-                    "type": "container",
-                    "name": self._container.get_name()
-                }
-            })
-            self._container.delete()
-            if not self.exists() or self._container.exists():
-                raise Exception
-
-
 def create(args):
     project_config = config.get_project_config(args.project)
 
@@ -245,10 +189,8 @@ def create(args):
     network.create()
     profile = Profile(args.project)
     profile.create()
-    image = Image(args.project)
-    image.create()
     for type in project_config.get("containers"):
-        container = ApplicationContainer(type, args.project, args.stage)
+        container = Container(type, args.project, args.stage)
         container.create()
 
 
@@ -256,7 +198,7 @@ def start(args):
     project_config = config.get_project_config(args.project)
 
     for type in project_config.get("containers"):
-        container = ApplicationContainer(type, args.project, args.stage)
+        container = Container(type, args.project, args.stage)
         container.start()
 
 
@@ -264,7 +206,7 @@ def stop(args):
     project_config = config.get_project_config(args.project)
 
     for type in project_config.get("containers"):
-        container = ApplicationContainer(type, args.project, args.stage)
+        container = Container(type, args.project, args.stage)
         container.stop()
 
 
@@ -272,11 +214,9 @@ def delete(args):
     project_config = config.get_project_config(args.project)
 
     for type in project_config.get("containers"):
-        container = ApplicationContainer(type, args.project, args.stage)
+        container = Container(type, args.project, args.stage)
         container.stop()
         container.delete()
-    image = Image(args.project)
-    image.delete()
     profile = Profile(args.project)
     profile.delete()
     network = Network(args.project, project_config)
