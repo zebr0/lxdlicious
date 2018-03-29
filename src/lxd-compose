@@ -34,11 +34,22 @@ config = Configuration()
 session = requests_unixsocket.Session()
 
 
-# this function can be used to wait for lxd asynchronous operations to be finished
-# see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
-def wait(response):
-    if response.json().get("type") == "async":
-        session.get(config.get_api_url() + response.json().get("operation") + "/wait")
+# this "hook" will be executed after each request to allow some generic treatment of the response
+# see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
+def hook(response, **kwargs):
+    json = response.json()
+    type = json.get("type")
+
+    if type == "error":
+        raise Exception(json)
+
+    # this will wait for lxd asynchronous operations to be finished
+    # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
+    if type == "async":
+        return session.get(config.get_api_url() + json.get("operation") + "/wait")
+
+
+session.hooks['response'].append(hook)
 
 
 # parent (abstract) class for all lxd resources
@@ -74,7 +85,7 @@ class Resource:
         # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
             print("creating", self._collection_url, self._name)
-            wait(session.post(self.get_full_collection_url(), json=json))
+            session.post(self.get_full_collection_url(), json=json)
             if not self.exists():
                 raise Exception("resource creation failed")
 
@@ -83,7 +94,7 @@ class Resource:
         # only does something if the resource exists (idempotence)
         if self.exists():
             print("deleting", self._collection_url, self._name)
-            wait(session.delete(self.get_full_element_url()))
+            session.delete(self.get_full_element_url())
             if self.exists():
                 raise Exception("resource deletion failed")
 
@@ -165,7 +176,7 @@ class Container(Resource):
         # only does something if the resource isn't already running (idempotence)
         if not self.is_running():
             print("starting", self._collection_url, self._name)
-            wait(session.put(self.get_full_element_url() + "/state", json={"action": "start"}))
+            session.put(self.get_full_element_url() + "/state", json={"action": "start"})
             if not self.is_running():
                 raise Exception("container starting failed")
 
@@ -177,7 +188,7 @@ class Container(Resource):
         # only does something if the resource is running (idempotence)
         if self.is_running():
             print("stopping", self._collection_url, self._name)
-            wait(session.put(self.get_full_element_url() + "/state", json={"action": "stop"}))
+            session.put(self.get_full_element_url() + "/state", json={"action": "stop"})
             if self.is_running():
                 raise Exception("container stopping failed")
 
