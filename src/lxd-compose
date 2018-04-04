@@ -19,13 +19,13 @@ class Configuration:
         self._base_url = parser.get("config", "base_url",
                                     fallback="https://raw.githubusercontent.com/mazerty/lxd-compose-files/master")
         # url of the unix socket for the lxd api
-        self._api_url = parser.get("config", "api_url", fallback="http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket")
+        self.api_url = parser.get("config", "api_url", fallback="http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket")
+        # alias of the base image
+        self.image_alias = parser.get("config", "image_alias", fallback="ubuntu/xenial")
 
     # returns a dictionary with the project configuration fetched from the base url
     def get_project_config(self, project):
         return json.loads(urllib.request.urlopen(self._base_url + "/" + project).read().decode("ascii"))
-
-    def get_api_url(self): return self._api_url
 
 
 # reads the configuration for the rest of the script
@@ -46,7 +46,7 @@ def hook(response, **kwargs):
     # this will wait for lxd asynchronous operations to be finished
     # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
     if type == "async":
-        return session.get(config.get_api_url() + json.get("operation") + "/wait")
+        return session.get(config.api_url + json.get("operation") + "/wait")
 
 
 session.hooks['response'].append(hook)
@@ -57,21 +57,18 @@ class Resource:
     def __init__(self, collection_url, name):
         # relative api url for this type of lxd resource (for example: "/1.0/containers")
         self._collection_url = collection_url
-        # the name of this particular resource
+        # the name of this specific resource
         self._name = name
 
     # returns the full api url for this type of lxd resource
     def get_full_collection_url(self):
-        return config.get_api_url() + self._collection_url
+        return config.api_url + self._collection_url
 
-    # returns the full api url for this particular resource
+    # returns the full api url for this specific resource
     def get_full_element_url(self):
         return self.get_full_collection_url() + "/" + self._name
 
-    def get_name(self):
-        return self._name
-
-    # returns whether this particular resource exists or not...
+    # returns whether this specific resource exists or not...
     def exists(self):
         # by checking if the resource's name is listed in the response of the collection url
         return any(filter(
@@ -89,7 +86,7 @@ class Resource:
             if not self.exists():
                 raise Exception("resource creation failed")
 
-    # deletes this particular resource
+    # deletes this specific resource
     def delete(self):
         # only does something if the resource exists (idempotence)
         if self.exists():
@@ -158,17 +155,17 @@ class Container(Resource):
                 "mode": "pull",
                 "server": "https://images.linuxcontainers.org",
                 "protocol": "simplestreams",
-                "alias": "ubuntu/xenial"
+                "alias": config.image_alias
             }
         })
 
-    # returns whether this particular container is running or not...
+    # returns whether this specific container is running or not...
     def is_running(self):
         # by checking its status in the metadata
         return self.exists() and session.get(self.get_full_element_url()).json().get("metadata").get(
             "status") == "Running"
 
-    # starts this particular container
+    # starts this specific container
     def start(self):
         if not self.exists():
             raise Exception("container starting failed: container must exist")
@@ -180,7 +177,7 @@ class Container(Resource):
             if not self.is_running():
                 raise Exception("container starting failed")
 
-    # stops this particular container
+    # stops this specific container
     def stop(self):
         if not self.exists():
             raise Exception("container stopping failed: container must exist")
@@ -196,29 +193,24 @@ class Container(Resource):
 def create(args):
     project_config = config.get_project_config(args.project)
 
-    network = Network(args.project, project_config)
-    network.create()
-    profile = Profile(args.project)
-    profile.create()
+    Network(args.project, project_config).create()
+    Profile(args.project).create()
     for type in project_config.get("containers"):
-        container = Container(type, args.project, args.stage)
-        container.create()
+        Container(type, args.project, args.stage).create()
 
 
 def start(args):
     project_config = config.get_project_config(args.project)
 
     for type in project_config.get("containers"):
-        container = Container(type, args.project, args.stage)
-        container.start()
+        Container(type, args.project, args.stage).start()
 
 
 def stop(args):
     project_config = config.get_project_config(args.project)
 
     for type in project_config.get("containers"):
-        container = Container(type, args.project, args.stage)
-        container.stop()
+        Container(type, args.project, args.stage).stop()
 
 
 def delete(args):
@@ -228,33 +220,31 @@ def delete(args):
         container = Container(type, args.project, args.stage)
         container.stop()
         container.delete()
-    profile = Profile(args.project)
-    profile.delete()
-    network = Network(args.project, project_config)
-    network.delete()
+    Profile(args.project).delete()
+    Network(args.project, project_config).delete()
 
 
 argparser = argparse.ArgumentParser()
 subparsers = argparser.add_subparsers()
 
 parser_create = subparsers.add_parser("create")
-parser_create.add_argument("project", nargs="?")
-parser_create.add_argument("stage", nargs="?")
+parser_create.add_argument("project")
+parser_create.add_argument("stage")
 parser_create.set_defaults(func=create)
 
 parser_start = subparsers.add_parser("start")
-parser_start.add_argument("project", nargs="?")
-parser_start.add_argument("stage", nargs="?")
+parser_start.add_argument("project")
+parser_start.add_argument("stage")
 parser_start.set_defaults(func=start)
 
 parser_stop = subparsers.add_parser("stop")
-parser_stop.add_argument("project", nargs="?")
-parser_stop.add_argument("stage", nargs="?")
+parser_stop.add_argument("project")
+parser_stop.add_argument("stage")
 parser_stop.set_defaults(func=stop)
 
 parser_delete = subparsers.add_parser("delete")
-parser_delete.add_argument("project", nargs="?")
-parser_delete.add_argument("stage", nargs="?")
+parser_delete.add_argument("project")
+parser_delete.add_argument("stage")
 parser_delete.set_defaults(func=delete)
 
 args = argparser.parse_args()
