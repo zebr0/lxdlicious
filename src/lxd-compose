@@ -3,6 +3,7 @@
 import argparse
 
 import requests_unixsocket
+import yaml
 
 api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 # opens a unix socket session for the rest of the script
@@ -165,10 +166,12 @@ class Container(Resource):
                 raise Exception("container stopping failed")
 
 
-project_config = {
-    "network_address": "10.42.254.1/24",
-    "containers": ["dummy"]
-}
+project_config = yaml.load("""
+---
+network_address: 10.42.254.1/24
+containers:
+  - dummy
+""")
 
 
 def create(args):
