@@ -174,56 +174,37 @@ containers:
 """)
 
 
-def create(args):
-    Network(args.project, project_config).create()
-    Profile(args.project).create()
+def create():
+    Network("test", project_config).create()
+    Profile("test").create()
     for type in project_config.get("containers"):
-        Container(type, args.project, args.stage).create()
+        Container(type, "test", "master").create()
 
 
-def start(args):
+def start():
     for type in project_config.get("containers"):
-        Container(type, args.project, args.stage).start()
+        Container(type, "test", "master").start()
 
 
-def stop(args):
+def stop():
     for type in project_config.get("containers"):
-        Container(type, args.project, args.stage).stop()
+        Container(type, "test", "master").stop()
 
 
-def delete(args):
+def delete():
     for type in project_config.get("containers"):
-        container = Container(type, args.project, args.stage)
+        container = Container(type, "test", "master")
         container.stop()
         container.delete()
-    Profile(args.project).delete()
-    Network(args.project, project_config).delete()
+    Profile("test").delete()
+    Network("test", project_config).delete()
 
+
+commands = ["create", "start", "stop", "delete"]
 
 argparser = argparse.ArgumentParser()
-subparsers = argparser.add_subparsers()
-
-parser_create = subparsers.add_parser("create")
-parser_create.add_argument("project")
-parser_create.add_argument("stage")
-parser_create.set_defaults(func=create)
-
-parser_start = subparsers.add_parser("start")
-parser_start.add_argument("project")
-parser_start.add_argument("stage")
-parser_start.set_defaults(func=start)
-
-parser_stop = subparsers.add_parser("stop")
-parser_stop.add_argument("project")
-parser_stop.add_argument("stage")
-parser_stop.set_defaults(func=stop)
-
-parser_delete = subparsers.add_parser("delete")
-parser_delete.add_argument("project")
-parser_delete.add_argument("stage")
-parser_delete.set_defaults(func=delete)
-
+argparser.add_argument("command", choices=commands)
 args = argparser.parse_args()
-args.func(args)
+globals()[args.command]()
 
 session.close()
