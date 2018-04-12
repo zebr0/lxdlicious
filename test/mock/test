@@ -1,4 +1,0 @@
-{
-    "network_address": "10.42.254.1/24",
-    "containers": ["dummy"]
-}

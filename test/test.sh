@@ -1,18 +1,10 @@
 #!/bin/sh -ex
 
 # cleans a potentially failed previous test run
-[ -f tmp/pid ] && kill $(cat tmp/pid)
 [ -d tmp/ ] && rm -rf tmp/
 
 # creates tmp directory
 mkdir tmp
-
-# starts the mock server
-cd mock
-python3 -m http.server &
-echo $! > ../tmp/pid
-sleep 1
-cd ..
 
 # test creating a stack
 ../src/lxd-compose create test master
@@ -35,9 +27,6 @@ diff results/container-stopped tmp/container-stop
 
 # test deleting the stack
 ../src/lxd-compose delete test master
-
-# stops the mock server
-kill $(cat tmp/pid) && rm tmp/pid
 
 # cleans tmp directory
 rm -rf tmp

@@ -1,35 +1,10 @@
 #!/usr/bin/python3 -u
 
 import argparse
-import configparser
-import json
-import urllib.request
 
 import requests_unixsocket
 
-
-# handles the configuration
-class Configuration:
-    def __init__(self):
-        # reads the configuration file first from /etc then from the working directory if present
-        parser = configparser.ConfigParser()
-        parser.read(["/etc/lxd-compose.conf", "lxd-compose.conf"])
-
-        # base url for the project files
-        self._base_url = parser.get("config", "base_url",
-                                    fallback="https://raw.githubusercontent.com/mazerty/lxd-compose-files/master")
-        # url of the unix socket for the lxd api
-        self.api_url = parser.get("config", "api_url", fallback="http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket")
-        # alias of the base image
-        self.image_alias = parser.get("config", "image_alias", fallback="ubuntu/xenial")
-
-    # returns a dictionary with the project configuration fetched from the base url
-    def get_project_config(self, project):
-        return json.loads(urllib.request.urlopen(self._base_url + "/" + project).read().decode("ascii"))
-
-
-# reads the configuration for the rest of the script
-config = Configuration()
+api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 # opens a unix socket session for the rest of the script
 session = requests_unixsocket.Session()
 
@@ -46,7 +21,7 @@ def hook(response, **kwargs):
     # this will wait for lxd asynchronous operations to be finished
     # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
     if type == "async":
-        return session.get(config.api_url + json.get("operation") + "/wait")
+        return session.get(api_url + json.get("operation") + "/wait")
 
 
 session.hooks['response'].append(hook)
@@ -62,7 +37,7 @@ class Resource:
 
     # returns the full api url for this type of lxd resource
     def get_full_collection_url(self):
-        return config.api_url + self._collection_url
+        return api_url + self._collection_url
 
     # returns the full api url for this specific resource
     def get_full_element_url(self):
@@ -155,7 +130,7 @@ class Container(Resource):
                 "mode": "pull",
                 "server": "https://images.linuxcontainers.org",
                 "protocol": "simplestreams",
-                "alias": config.image_alias
+                "alias": "ubuntu/xenial"
             }
         })
 
@@ -190,9 +165,13 @@ class Container(Resource):
                 raise Exception("container stopping failed")
 
 
-def create(args):
-    project_config = config.get_project_config(args.project)
+project_config = {
+    "network_address": "10.42.254.1/24",
+    "containers": ["dummy"]
+}
 
+
+def create(args):
     Network(args.project, project_config).create()
     Profile(args.project).create()
     for type in project_config.get("containers"):
@@ -200,22 +179,16 @@ def create(args):
 
 
 def start(args):
-    project_config = config.get_project_config(args.project)
-
     for type in project_config.get("containers"):
         Container(type, args.project, args.stage).start()
 
 
 def stop(args):
-    project_config = config.get_project_config(args.project)
-
     for type in project_config.get("containers"):
         Container(type, args.project, args.stage).stop()
 
 
 def delete(args):
-    project_config = config.get_project_config(args.project)
-
     for type in project_config.get("containers"):
         container = Container(type, args.project, args.stage)
         container.stop()
