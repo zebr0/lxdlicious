@@ -52,7 +52,7 @@ class Resource:
 
 
 class Network(Resource):
-    def __init__(self, project, config):
+    def __init__(self, project):
         # network names must end with a digit
         super().__init__("/1.0/networks", project + "0")
 
@@ -145,30 +145,30 @@ class Container(Resource):
                 raise Exception("container stopping failed")
 
 
-def create(project_config):
-    Network("test", project_config).create()
+def create():
+    Network("test").create()
     Profile("test").create()
-    for type in project_config.get("containers"):
+    for type in config.get("containers"):
         Container(type, "test", "master").create()
 
 
-def start(project_config):
-    for type in project_config.get("containers"):
+def start():
+    for type in config.get("containers"):
         Container(type, "test", "master").start()
 
 
-def stop(project_config):
-    for type in project_config.get("containers"):
+def stop():
+    for type in config.get("containers"):
         Container(type, "test", "master").stop()
 
 
-def delete(project_config):
-    for type in project_config.get("containers"):
+def delete():
+    for type in config.get("containers"):
         container = Container(type, "test", "master")
         container.stop()
         container.delete()
     Profile("test").delete()
-    Network("test", project_config).delete()
+    Network("test").delete()
 
 
 # this "hook" will be executed after each request to allow some generic treatment of the response
@@ -189,6 +189,8 @@ def hook(response, **kwargs):
 if __name__ == '__main__':
     api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 
+    config = yaml.load(sys.stdin)
+
     # opens a unix socket session for the rest of the script
     session = requests_unixsocket.Session()
     session.hooks['response'].append(hook)
@@ -197,6 +199,6 @@ if __name__ == '__main__':
     argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
     args = argparser.parse_args()
 
-    globals()[args.command](yaml.load(sys.stdin))
+    globals()[args.command]()
 
     session.close()
