@@ -1,6 +1,7 @@
 #!/usr/bin/python3 -u
 
 import argparse
+import sys
 
 import requests_unixsocket
 import yaml
@@ -166,12 +167,7 @@ class Container(Resource):
                 raise Exception("container stopping failed")
 
 
-project_config = yaml.load("""
----
-network_address: 10.42.254.1/24
-containers:
-  - dummy
-""")
+project_config = yaml.load(sys.stdin)
 
 
 def create():
