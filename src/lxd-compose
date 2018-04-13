@@ -9,11 +9,14 @@ import yaml
 
 # parent (abstract) class for all lxd resources
 class Resource:
-    def __init__(self, collection_url, name):
+    def __init__(self, collection_url, config):
         # relative api url for this type of lxd resource (for example: "/1.0/containers")
         self._collection_url = collection_url
-        # the name of this specific resource
-        self._name = name
+        # the configuration of this specific resource
+        self._config = config
+
+    def get_name(self):
+        return self._config.get("name")
 
     # returns the full api url for this type of lxd resource
     def get_full_collection_url(self):
@@ -21,23 +24,22 @@ class Resource:
 
     # returns the full api url for this specific resource
     def get_full_element_url(self):
-        return self.get_full_collection_url() + "/" + self._name
+        return self.get_full_collection_url() + "/" + self.get_name()
 
     # returns whether this specific resource exists or not...
     def exists(self):
         # by checking if the resource's name is listed in the response of the collection url
         return any(filter(
-            lambda a: a == self._collection_url + "/" + self._name,
+            lambda a: a == self._collection_url + "/" + self.get_name(),
             session.get(self.get_full_collection_url()).json().get("metadata")
         ))
 
-    # meant to be called by actual "create" functions in child classes with a json template matching the resource's type
     # handles the basic api resource creation
-    def _create(self, json):
+    def create(self):
         # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
-            print("creating", self._collection_url, self._name)
-            session.post(self.get_full_collection_url(), json=json)
+            print("creating", self._collection_url, self.get_name())
+            session.post(self.get_full_collection_url(), json=self._config)
             if not self.exists():
                 raise Exception("resource creation failed")
 
@@ -45,44 +47,25 @@ class Resource:
     def delete(self):
         # only does something if the resource exists (idempotence)
         if self.exists():
-            print("deleting", self._collection_url, self._name)
+            print("deleting", self._collection_url, self.get_name())
             session.delete(self.get_full_element_url())
             if self.exists():
                 raise Exception("resource deletion failed")
 
 
 class Network(Resource):
-    def __init__(self, network_config):
-        super().__init__("/1.0/networks", network_config.get("name"))
-
-        # additional attributes
-        self._network_config = network_config
-
-    def create(self):
-        super()._create(self._network_config)
+    def __init__(self, config):
+        super().__init__("/1.0/networks", config)
 
 
 class Profile(Resource):
-    def __init__(self, profile_config):
-        super().__init__("/1.0/profiles", profile_config.get("name"))
-
-        # additional attribute: reference to the corresponding network
-        self._profile_config = profile_config
-
-    def create(self):
-        super()._create(self._profile_config)
+    def __init__(self, config):
+        super().__init__("/1.0/profiles", config)
 
 
 class Container(Resource):
-    def __init__(self, container_config):
-        # the container name is a concatenation of its type, the project name and the deployment stage
-        super().__init__("/1.0/containers", container_config.get("name"))
-
-        # additional attribute: reference to the project's profile
-        self._container_config = container_config
-
-    def create(self):
-        super()._create(self._container_config)
+    def __init__(self, config):
+        super().__init__("/1.0/containers", config)
 
     # returns whether this specific container is running or not...
     def is_running(self):
@@ -97,7 +80,7 @@ class Container(Resource):
 
         # only does something if the resource isn't already running (idempotence)
         if not self.is_running():
-            print("starting", self._collection_url, self._name)
+            print("starting", self._collection_url, self.get_name())
             session.put(self.get_full_element_url() + "/state", json={"action": "start"})
             if not self.is_running():
                 raise Exception("container starting failed")
@@ -109,7 +92,7 @@ class Container(Resource):
 
         # only does something if the resource is running (idempotence)
         if self.is_running():
-            print("stopping", self._collection_url, self._name)
+            print("stopping", self._collection_url, self.get_name())
             session.put(self.get_full_element_url() + "/state", json={"action": "stop"})
             if self.is_running():
                 raise Exception("container stopping failed")
@@ -160,14 +143,14 @@ def hook(response, **kwargs):
         return session.get(api_url + json.get("operation") + "/wait")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 
     config = yaml.load(sys.stdin, Loader=yaml.BaseLoader)
 
     # opens a unix socket session for the rest of the script
     session = requests_unixsocket.Session()
-    session.hooks['response'].append(hook)
+    session.hooks["response"].append(hook)
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
