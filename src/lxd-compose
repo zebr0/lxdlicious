@@ -6,28 +6,6 @@ import sys
 import requests_unixsocket
 import yaml
 
-api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
-# opens a unix socket session for the rest of the script
-session = requests_unixsocket.Session()
-
-
-# this "hook" will be executed after each request to allow some generic treatment of the response
-# see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
-def hook(response, **kwargs):
-    json = response.json()
-    type = json.get("type")
-
-    if type == "error":
-        raise Exception(json)
-
-    # this will wait for lxd asynchronous operations to be finished
-    # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
-    if type == "async":
-        return session.get(api_url + json.get("operation") + "/wait")
-
-
-session.hooks['response'].append(hook)
-
 
 # parent (abstract) class for all lxd resources
 class Resource:
@@ -167,27 +145,24 @@ class Container(Resource):
                 raise Exception("container stopping failed")
 
 
-project_config = yaml.load(sys.stdin)
-
-
-def create():
+def create(project_config):
     Network("test", project_config).create()
     Profile("test").create()
     for type in project_config.get("containers"):
         Container(type, "test", "master").create()
 
 
-def start():
+def start(project_config):
     for type in project_config.get("containers"):
         Container(type, "test", "master").start()
 
 
-def stop():
+def stop(project_config):
     for type in project_config.get("containers"):
         Container(type, "test", "master").stop()
 
 
-def delete():
+def delete(project_config):
     for type in project_config.get("containers"):
         container = Container(type, "test", "master")
         container.stop()
@@ -196,11 +171,32 @@ def delete():
     Network("test", project_config).delete()
 
 
-commands = ["create", "start", "stop", "delete"]
+# this "hook" will be executed after each request to allow some generic treatment of the response
+# see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
+def hook(response, **kwargs):
+    json = response.json()
+    type = json.get("type")
 
-argparser = argparse.ArgumentParser()
-argparser.add_argument("command", choices=commands)
-args = argparser.parse_args()
-globals()[args.command]()
+    if type == "error":
+        raise Exception(json)
 
-session.close()
+    # this will wait for lxd asynchronous operations to be finished
+    # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
+    if type == "async":
+        return session.get(api_url + json.get("operation") + "/wait")
+
+
+if __name__ == '__main__':
+    api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
+
+    # opens a unix socket session for the rest of the script
+    session = requests_unixsocket.Session()
+    session.hooks['response'].append(hook)
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
+    args = argparser.parse_args()
+
+    globals()[args.command](yaml.load(sys.stdin))
+
+    session.close()
