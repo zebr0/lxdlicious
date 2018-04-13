@@ -34,7 +34,7 @@ class Resource:
             session.get(self.get_full_collection_url()).json().get("metadata")
         ))
 
-    # handles the basic api resource creation
+    # creates this specific resource
     def create(self):
         # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
@@ -99,33 +99,31 @@ class Container(Resource):
 
 
 def create():
-    for network in config.get("networks"):
-        Network(network).create()
-    for profile in config.get("profiles"):
-        Profile(profile).create()
-    for container in config.get("containers"):
-        Container(container).create()
+    for item in config.get("networks"):
+        Network(item).create()
+    for item in config.get("profiles"):
+        Profile(item).create()
+    for item in config.get("containers"):
+        Container(item).create()
 
 
 def start():
-    for container in config.get("containers"):
-        Container(container).start()
+    for item in config.get("containers"):
+        Container(item).start()
 
 
 def stop():
-    for container in config.get("containers"):
-        Container(container).stop()
+    for item in config.get("containers"):
+        Container(item).stop()
 
 
 def delete():
-    for container in config.get("containers"):
-        container = Container(container)
-        container.stop()
-        container.delete()
-    for profile in config.get("profiles"):
-        Profile(profile).delete()
-    for network in config.get("networks"):
-        Network(network).delete()
+    for item in config.get("containers"):
+        Container(item).delete()
+    for item in config.get("profiles"):
+        Profile(item).delete()
+    for item in config.get("networks"):
+        Network(item).delete()
 
 
 # this "hook" will be executed after each request to allow some generic treatment of the response
@@ -143,19 +141,22 @@ def hook(response, **kwargs):
         return session.get(api_url + json.get("operation") + "/wait")
 
 
+# entrypoint
 if __name__ == "__main__":
-    api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
-
-    config = yaml.load(sys.stdin, Loader=yaml.BaseLoader)
-
-    # opens a unix socket session for the rest of the script
+    # opens a unix socket session and adds the hook defined above
     session = requests_unixsocket.Session()
     session.hooks["response"].append(hook)
+    api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
+    argparser = argparse.ArgumentParser(description="Define and run multi-container applications with LXD.")
+    argparser.add_argument("command", choices=["create", "start", "stop", "delete"],
+                           help="command to execute on the configuration given through stdin")
     args = argparser.parse_args()
 
+    # loads the configuration from stdin (uses the yaml baseloader to preserve all strings)
+    config = yaml.load(sys.stdin, Loader=yaml.BaseLoader)
+
+    # calls the method given as parameter
     globals()[args.command]()
 
     session.close()
