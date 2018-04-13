@@ -52,67 +52,37 @@ class Resource:
 
 
 class Network(Resource):
-    def __init__(self, project):
-        # network names must end with a digit
-        super().__init__("/1.0/networks", project + "0")
+    def __init__(self, network_config):
+        super().__init__("/1.0/networks", network_config.get("name"))
 
         # additional attributes
-        self._address = config.get("network_address")
-        self._domain = project
+        self._network_config = network_config
 
     def create(self):
-        super()._create({
-            "name": self._name,
-            "config": {
-                "ipv4.address": self._address,
-                "ipv4.nat": "true",
-                "ipv6.address": "none",
-                "dns.mode": "dynamic",
-                "dns.domain": self._domain
-            }
-        })
+        super()._create(self._network_config)
 
 
 class Profile(Resource):
-    def __init__(self, project):
-        super().__init__("/1.0/profiles", project)
+    def __init__(self, profile_config):
+        super().__init__("/1.0/profiles", profile_config.get("name"))
 
         # additional attribute: reference to the corresponding network
-        self._network = project + "0"
+        self._profile_config = profile_config
 
     def create(self):
-        super()._create({
-            "name": self._name,
-            "devices": {
-                "eth0": {
-                    "type": "nic",
-                    "nictype": "bridged",
-                    "parent": self._network
-                }
-            }
-        })
+        super()._create(self._profile_config)
 
 
 class Container(Resource):
-    def __init__(self, type, project, stage):
+    def __init__(self, container_config):
         # the container name is a concatenation of its type, the project name and the deployment stage
-        super().__init__("/1.0/containers", "-".join([type, project, stage]))
+        super().__init__("/1.0/containers", container_config.get("name"))
 
         # additional attribute: reference to the project's profile
-        self._profile = project
+        self._container_config = container_config
 
     def create(self):
-        super()._create({
-            "name": self._name,
-            "profiles": ["default", "compose", self._profile],
-            "source": {
-                "type": "image",
-                "mode": "pull",
-                "server": "https://images.linuxcontainers.org",
-                "protocol": "simplestreams",
-                "alias": "ubuntu/xenial"
-            }
-        })
+        super()._create(self._container_config)
 
     # returns whether this specific container is running or not...
     def is_running(self):
@@ -146,29 +116,33 @@ class Container(Resource):
 
 
 def create():
-    Network("test").create()
-    Profile("test").create()
-    for type in config.get("containers"):
-        Container(type, "test", "master").create()
+    for network in config.get("networks"):
+        Network(network).create()
+    for profile in config.get("profiles"):
+        Profile(profile).create()
+    for container in config.get("containers"):
+        Container(container).create()
 
 
 def start():
-    for type in config.get("containers"):
-        Container(type, "test", "master").start()
+    for container in config.get("containers"):
+        Container(container).start()
 
 
 def stop():
-    for type in config.get("containers"):
-        Container(type, "test", "master").stop()
+    for container in config.get("containers"):
+        Container(container).stop()
 
 
 def delete():
-    for type in config.get("containers"):
-        container = Container(type, "test", "master")
+    for container in config.get("containers"):
+        container = Container(container)
         container.stop()
         container.delete()
-    Profile("test").delete()
-    Network("test").delete()
+    for profile in config.get("profiles"):
+        Profile(profile).delete()
+    for network in config.get("networks"):
+        Network(network).delete()
 
 
 # this "hook" will be executed after each request to allow some generic treatment of the response
@@ -189,7 +163,7 @@ def hook(response, **kwargs):
 if __name__ == '__main__':
     api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 
-    config = yaml.load(sys.stdin)
+    config = yaml.load(sys.stdin, Loader=yaml.BaseLoader)
 
     # opens a unix socket session for the rest of the script
     session = requests_unixsocket.Session()

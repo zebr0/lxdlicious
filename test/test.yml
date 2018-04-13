@@ -1,4 +1,28 @@
 ---
-network_address: 10.42.254.1/24
+networks:
+  - name: test0
+    config:
+      ipv4.address: 10.42.254.1/24
+      ipv4.nat: true
+      ipv6.address: none
+      dns.mode: dynamic
+      dns.domain: test
+profiles:
+  - name: test
+    devices:
+      eth0:
+        type: nic
+        nictype: bridged
+        parent: test0
 containers:
-  - dummy
+  - name: dummy-test-master
+    profiles:
+      - default
+      - compose
+      - test
+    source:
+      type: image
+      mode: pull
+      server: https://images.linuxcontainers.org
+      protocol: simplestreams
+      alias: ubuntu/xenial
