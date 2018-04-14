@@ -10,6 +10,10 @@ networks:
 profiles:
   - name: test
     devices:
+      root:
+        path: /
+        pool: default
+        type: disk
       eth0:
         type: nic
         nictype: bridged
@@ -17,8 +21,6 @@ profiles:
 containers:
   - name: dummy-test-master
     profiles:
-      - default
-      - compose
       - test
     source:
       type: image
