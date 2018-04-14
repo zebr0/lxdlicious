@@ -122,4 +122,14 @@ assert session.get(api_url + "/1.0/networks/test0").json().get("error_code") == 
 assert session.get(api_url + "/1.0/profiles/test").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/containers/dummy").json().get("error_code") == 404
 
+# tests if an empty configuration is handled without error, even if it does nothing
+sp = subprocess.Popen("echo | ../src/lxd-compose create", shell=True, stdout=sys.stdout, stderr=sys.stderr)
+sp.wait()
+sp = subprocess.Popen("echo | ../src/lxd-compose start", shell=True, stdout=sys.stdout, stderr=sys.stderr)
+sp.wait()
+sp = subprocess.Popen("echo | ../src/lxd-compose stop", shell=True, stdout=sys.stdout, stderr=sys.stderr)
+sp.wait()
+sp = subprocess.Popen("echo | ../src/lxd-compose delete", shell=True, stdout=sys.stdout, stderr=sys.stderr)
+sp.wait()
+
 session.close()

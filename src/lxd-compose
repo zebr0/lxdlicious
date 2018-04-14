@@ -104,34 +104,34 @@ class Container(Resource):
 
 
 def create():
-    for item in config.get("storage-pools"):
+    for item in config.get("storage-pools") or []:
         StoragePool(item).create()
-    for item in config.get("networks"):
+    for item in config.get("networks") or []:
         Network(item).create()
-    for item in config.get("profiles"):
+    for item in config.get("profiles") or []:
         Profile(item).create()
-    for item in config.get("containers"):
+    for item in config.get("containers") or []:
         Container(item).create()
 
 
 def start():
-    for item in config.get("containers"):
+    for item in config.get("containers") or []:
         Container(item).start()
 
 
 def stop():
-    for item in config.get("containers"):
+    for item in config.get("containers") or []:
         Container(item).stop()
 
 
 def delete():
-    for item in config.get("containers"):
+    for item in config.get("containers") or []:
         Container(item).delete()
-    for item in config.get("profiles"):
+    for item in config.get("profiles") or []:
         Profile(item).delete()
-    for item in config.get("networks"):
+    for item in config.get("networks") or []:
         Network(item).delete()
-    for item in config.get("storage-pools"):
+    for item in config.get("storage-pools") or []:
         StoragePool(item).delete()
 
 
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     # loads the configuration from stdin (uses the yaml baseloader to preserve all strings)
-    config = yaml.load(sys.stdin, Loader=yaml.BaseLoader)
+    config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
 
     # calls the method given as parameter
     globals()[args.command]()
