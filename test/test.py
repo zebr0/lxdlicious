@@ -5,17 +5,20 @@ import sys
 
 import requests_unixsocket
 
+
+def run(command):
+    subprocess.Popen(command, shell=True, stdout=sys.stdout, stderr=sys.stderr).wait()
+
+
 # opens a unix socket session to call the lxd api
 session = requests_unixsocket.Session()
 api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 
 # ensures the test resources don't exist before continuing
-sp = subprocess.Popen("cat test.yml | ../src/lxd-compose delete", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
+run("cat test.yml | ../src/lxd-compose delete")
 
 # test creating a stack
-sp = subprocess.Popen("cat test.yml | ../src/lxd-compose create", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
+run("cat test.yml | ../src/lxd-compose create")
 assert session.get(api_url + "/1.0/storage-pools/test").json() == {"error": "",
                                                                    "error_code": 0,
                                                                    "metadata": {"config": {
@@ -106,30 +109,23 @@ assert container_json == {"error": "",
                           "type": "sync"}
 
 # test starting a stack
-sp = subprocess.Popen("cat test.yml | ../src/lxd-compose start", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
+run("cat test.yml | ../src/lxd-compose start")
 assert session.get(api_url + "/1.0/containers/dummy").json().get("metadata").get("status") == "Running"
 
 # test stopping a stack
-sp = subprocess.Popen("cat test.yml | ../src/lxd-compose stop", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
+run("cat test.yml | ../src/lxd-compose stop")
 assert session.get(api_url + "/1.0/containers/dummy").json().get("metadata").get("status") == "Stopped"
 
 # test deleting a stack
-sp = subprocess.Popen("cat test.yml | ../src/lxd-compose delete", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
+run("cat test.yml | ../src/lxd-compose delete")
 assert session.get(api_url + "/1.0/networks/test0").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/profiles/test").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/containers/dummy").json().get("error_code") == 404
 
 # tests if an empty configuration is handled without error, even if it does nothing
-sp = subprocess.Popen("echo | ../src/lxd-compose create", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
-sp = subprocess.Popen("echo | ../src/lxd-compose start", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
-sp = subprocess.Popen("echo | ../src/lxd-compose stop", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
-sp = subprocess.Popen("echo | ../src/lxd-compose delete", shell=True, stdout=sys.stdout, stderr=sys.stderr)
-sp.wait()
+run("echo | ../src/lxd-compose create")
+run("echo | ../src/lxd-compose start")
+run("echo | ../src/lxd-compose stop")
+run("echo | ../src/lxd-compose delete")
 
 session.close()
