@@ -22,7 +22,7 @@ profiles:
         nictype: bridged
         parent: test0
 containers:
-  - name: dummy-test-master
+  - name: dummy
     profiles:
       - test
     source:

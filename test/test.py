@@ -24,7 +24,7 @@ assert session.get(api_url + "/1.0/storage-pools/test").json() == {"error": "",
                                                                        "driver": "dir",
                                                                        "name": "test",
                                                                        "used_by": [
-                                                                           "/1.0/containers/dummy-test-master",
+                                                                           "/1.0/containers/dummy",
                                                                            "/1.0/profiles/test"]},
                                                                    "operation": "",
                                                                    "status": "Success",
@@ -45,7 +45,7 @@ assert session.get(api_url + "/1.0/networks/test0").json() == {"status": "Succes
                                                                                 "ipv6.address": "none"},
                                                                             "type": "bridge",
                                                                             "used_by": [
-                                                                                "/1.0/containers/dummy-test-master"],
+                                                                                "/1.0/containers/dummy"],
                                                                             "name": "test0",
                                                                             "managed": True}}
 assert session.get(api_url + "/1.0/profiles/test").json() == {"status_code": 200,
@@ -56,7 +56,7 @@ assert session.get(api_url + "/1.0/profiles/test").json() == {"status_code": 200
                                                               "operation": "",
                                                               "metadata": {
                                                                   "name": "test",
-                                                                  "used_by": ["/1.0/containers/dummy-test-master"],
+                                                                  "used_by": ["/1.0/containers/dummy"],
                                                                   "config": {},
                                                                   "description": "",
                                                                   "devices": {
@@ -67,7 +67,7 @@ assert session.get(api_url + "/1.0/profiles/test").json() == {"status_code": 200
                                                                                "parent": "test0",
                                                                                "nictype": "bridged"}}}}
 # cleans the api output of volatile information before testing
-container_json = session.get(api_url + "/1.0/containers/dummy-test-master").json()
+container_json = session.get(api_url + "/1.0/containers/dummy").json()
 container_json.get("metadata").pop("created_at")
 container_json.get("metadata").pop("config")
 container_json.get("metadata").get("expanded_config").pop("volatile.base_image")
@@ -95,7 +95,7 @@ assert container_json == {"error": "",
                                                                      "pool": "test",
                                                                      "type": "disk"}},
                                        "last_used_at": "1970-01-01T00:00:00Z",
-                                       "name": "dummy-test-master",
+                                       "name": "dummy",
                                        "profiles": ["test"],
                                        "stateful": False,
                                        "status": "Stopped",
@@ -108,18 +108,18 @@ assert container_json == {"error": "",
 # test starting a stack
 sp = subprocess.Popen("cat test.yml | ../src/lxd-compose start", shell=True, stdout=sys.stdout, stderr=sys.stderr)
 sp.wait()
-assert session.get(api_url + "/1.0/containers/dummy-test-master").json().get("metadata").get("status") == "Running"
+assert session.get(api_url + "/1.0/containers/dummy").json().get("metadata").get("status") == "Running"
 
 # test stopping a stack
 sp = subprocess.Popen("cat test.yml | ../src/lxd-compose stop", shell=True, stdout=sys.stdout, stderr=sys.stderr)
 sp.wait()
-assert session.get(api_url + "/1.0/containers/dummy-test-master").json().get("metadata").get("status") == "Stopped"
+assert session.get(api_url + "/1.0/containers/dummy").json().get("metadata").get("status") == "Stopped"
 
 # test deleting a stack
 sp = subprocess.Popen("cat test.yml | ../src/lxd-compose delete", shell=True, stdout=sys.stdout, stderr=sys.stderr)
 sp.wait()
 assert session.get(api_url + "/1.0/networks/test0").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/profiles/test").json().get("error_code") == 404
-assert session.get(api_url + "/1.0/containers/dummy-test-master").json().get("error_code") == 404
+assert session.get(api_url + "/1.0/containers/dummy").json().get("error_code") == 404
 
 session.close()
