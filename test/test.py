@@ -16,6 +16,20 @@ sp.wait()
 # test creating a stack
 sp = subprocess.Popen("cat test.yml | ../src/lxd-compose create", shell=True, stdout=sys.stdout, stderr=sys.stderr)
 sp.wait()
+assert session.get(api_url + "/1.0/storage-pools/test").json() == {"error": "",
+                                                                   "error_code": 0,
+                                                                   "metadata": {"config": {
+                                                                       "source": "/var/lib/lxd/storage-pools/test"},
+                                                                       "description": "",
+                                                                       "driver": "dir",
+                                                                       "name": "test",
+                                                                       "used_by": [
+                                                                           "/1.0/containers/dummy-test-master",
+                                                                           "/1.0/profiles/test"]},
+                                                                   "operation": "",
+                                                                   "status": "Success",
+                                                                   "status_code": 200,
+                                                                   "type": "sync"}
 assert session.get(api_url + "/1.0/networks/test0").json() == {"status": "Success",
                                                                "operation": "",
                                                                "error_code": 0,
@@ -47,7 +61,7 @@ assert session.get(api_url + "/1.0/profiles/test").json() == {"status_code": 200
                                                                   "description": "",
                                                                   "devices": {
                                                                       "root": {"path": "/",
-                                                                               "pool": "default",
+                                                                               "pool": "test",
                                                                                "type": "disk"},
                                                                       "eth0": {"type": "nic",
                                                                                "parent": "test0",
@@ -78,7 +92,7 @@ assert container_json == {"error": "",
                                                                      "parent": "test0",
                                                                      "type": "nic"},
                                                             "root": {"path": "/",
-                                                                     "pool": "default",
+                                                                     "pool": "test",
                                                                      "type": "disk"}},
                                        "last_used_at": "1970-01-01T00:00:00Z",
                                        "name": "dummy-test-master",

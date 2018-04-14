@@ -1,4 +1,7 @@
 ---
+storage-pools:
+  - name: test
+    driver: dir
 networks:
   - name: test0
     config:
@@ -12,7 +15,7 @@ profiles:
     devices:
       root:
         path: /
-        pool: default
+        pool: test
         type: disk
       eth0:
         type: nic

@@ -53,6 +53,11 @@ class Resource:
                 raise Exception("resource deletion failed")
 
 
+class StoragePool(Resource):
+    def __init__(self, config):
+        super().__init__("/1.0/storage-pools", config)
+
+
 class Network(Resource):
     def __init__(self, config):
         super().__init__("/1.0/networks", config)
@@ -99,6 +104,8 @@ class Container(Resource):
 
 
 def create():
+    for item in config.get("storage-pools"):
+        StoragePool(item).create()
     for item in config.get("networks"):
         Network(item).create()
     for item in config.get("profiles"):
@@ -124,6 +131,8 @@ def delete():
         Profile(item).delete()
     for item in config.get("networks"):
         Network(item).delete()
+    for item in config.get("storage-pools"):
+        StoragePool(item).delete()
 
 
 # this "hook" will be executed after each request to allow some generic treatment of the response
