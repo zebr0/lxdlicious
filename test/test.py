@@ -17,7 +17,8 @@ api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 # ensures the test resources don't exist before continuing
 run("cat test.yml | ../src/lxd-compose delete")
 
-# test creating a stack
+# test creating a stack (twice, for idempotence)
+run("cat test.yml | ../src/lxd-compose create")
 run("cat test.yml | ../src/lxd-compose create")
 assert session.get(api_url + "/1.0/storage-pools/test").json() == {"error": "",
                                                                    "error_code": 0,
@@ -108,15 +109,18 @@ assert container_json == {"error": "",
                           "status_code": 200,
                           "type": "sync"}
 
-# test starting a stack
+# test starting a stack (twice, for idempotence)
+run("cat test.yml | ../src/lxd-compose start")
 run("cat test.yml | ../src/lxd-compose start")
 assert session.get(api_url + "/1.0/containers/dummy").json().get("metadata").get("status") == "Running"
 
-# test stopping a stack
+# test stopping a stack (twice, for idempotence)
+run("cat test.yml | ../src/lxd-compose stop")
 run("cat test.yml | ../src/lxd-compose stop")
 assert session.get(api_url + "/1.0/containers/dummy").json().get("metadata").get("status") == "Stopped"
 
-# test deleting a stack
+# test deleting a stack (twice, for idempotence)
+run("cat test.yml | ../src/lxd-compose delete")
 run("cat test.yml | ../src/lxd-compose delete")
 assert session.get(api_url + "/1.0/networks/test0").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/profiles/test").json().get("error_code") == 404
