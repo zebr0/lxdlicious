@@ -1,7 +1,8 @@
 ---
-storage-pools:
+storage_pools:
   - name: test
     driver: dir
+
 networks:
   - name: test0
     config:
@@ -10,6 +11,7 @@ networks:
       ipv6.address: none
       dns.mode: dynamic
       dns.domain: test
+
 profiles:
   - name: test
     devices:
@@ -21,6 +23,7 @@ profiles:
         type: nic
         nictype: bridged
         parent: test0
+
 containers:
   - name: dummy
     profiles:

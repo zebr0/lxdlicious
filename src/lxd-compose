@@ -104,7 +104,7 @@ class Container(Resource):
 
 
 def create():
-    for item in config.get("storage-pools") or []:
+    for item in config.get("storage_pools") or []:
         StoragePool(item).create()
     for item in config.get("networks") or []:
         Network(item).create()
@@ -131,7 +131,7 @@ def delete():
         Profile(item).delete()
     for item in config.get("networks") or []:
         Network(item).delete()
-    for item in config.get("storage-pools") or []:
+    for item in config.get("storage_pools") or []:
         StoragePool(item).delete()
 
 
