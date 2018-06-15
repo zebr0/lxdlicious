@@ -6,6 +6,31 @@ import sys
 import requests_unixsocket
 import yaml
 
+api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
+
+
+# this "hook" will be executed after each request to allow some generic treatment of the response
+# see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
+def hook(response, **kwargs):
+    json = response.json()
+    type = json.get("type")
+
+    if type == "error":
+        raise Exception(json)
+
+    # this will wait for lxd asynchronous operations to be finished
+    # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
+    if type == "async":
+        return session.get(api_url + json.get("operation") + "/wait")
+
+
+# opens a unix socket session and adds the hook defined above
+session = requests_unixsocket.Session()
+session.hooks["response"].append(hook)
+
+# loads the configuration from stdin (uses the yaml baseloader to preserve all strings)
+config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
+
 
 # parent (abstract) class for all lxd resources
 class Resource:
@@ -15,31 +40,31 @@ class Resource:
         # the configuration of this specific resource
         self._config = config
 
-    def get_name(self):
+    def _get_name(self):
         return self._config.get("name")
 
     # returns the full api url for this type of lxd resource
-    def get_full_collection_url(self):
+    def _get_full_collection_url(self):
         return api_url + self._collection_url
 
     # returns the full api url for this specific resource
-    def get_full_element_url(self):
-        return self.get_full_collection_url() + "/" + self.get_name()
+    def _get_full_element_url(self):
+        return self._get_full_collection_url() + "/" + self._get_name()
 
     # returns whether this specific resource exists or not...
     def exists(self):
         # by checking if the resource's name is listed in the response of the collection url
         return any(filter(
-            lambda a: a == self._collection_url + "/" + self.get_name(),
-            session.get(self.get_full_collection_url()).json().get("metadata")
+            lambda a: a == self._collection_url + "/" + self._get_name(),
+            session.get(self._get_full_collection_url()).json().get("metadata")
         ))
 
     # creates this specific resource
     def create(self):
         # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
-            print("creating", self._collection_url, self.get_name())
-            session.post(self.get_full_collection_url(), json=self._config)
+            print("creating", self._collection_url, self._get_name())
+            session.post(self._get_full_collection_url(), json=self._config)
             if not self.exists():
                 raise Exception("resource creation failed")
 
@@ -47,8 +72,8 @@ class Resource:
     def delete(self):
         # only does something if the resource exists (idempotence)
         if self.exists():
-            print("deleting", self._collection_url, self.get_name())
-            session.delete(self.get_full_element_url())
+            print("deleting", self._collection_url, self._get_name())
+            session.delete(self._get_full_element_url())
             if self.exists():
                 raise Exception("resource deletion failed")
 
@@ -75,8 +100,7 @@ class Container(Resource):
     # returns whether this specific container is running or not...
     def is_running(self):
         # by checking its status in the metadata
-        return self.exists() and session.get(self.get_full_element_url()).json().get("metadata").get(
-            "status") == "Running"
+        return self.exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
 
     # starts this specific container
     def start(self):
@@ -85,8 +109,8 @@ class Container(Resource):
 
         # only does something if the resource isn't already running (idempotence)
         if not self.is_running():
-            print("starting", self._collection_url, self.get_name())
-            session.put(self.get_full_element_url() + "/state", json={"action": "start"})
+            print("starting", self._collection_url, self._get_name())
+            session.put(self._get_full_element_url() + "/state", json={"action": "start"})
             if not self.is_running():
                 raise Exception("container starting failed")
 
@@ -97,8 +121,8 @@ class Container(Resource):
 
         # only does something if the resource is running (idempotence)
         if self.is_running():
-            print("stopping", self._collection_url, self.get_name())
-            session.put(self.get_full_element_url() + "/state", json={"action": "stop"})
+            print("stopping", self._collection_url, self._get_name())
+            session.put(self._get_full_element_url() + "/state", json={"action": "stop"})
             if self.is_running():
                 raise Exception("container stopping failed")
 
@@ -135,37 +159,11 @@ def delete():
         StoragePool(item).delete()
 
 
-# this "hook" will be executed after each request to allow some generic treatment of the response
-# see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
-def hook(response, **kwargs):
-    json = response.json()
-    type = json.get("type")
+argparser = argparse.ArgumentParser(description="Define and run multi-container applications with LXD.")
+argparser.add_argument("command", choices=["create", "start", "stop", "delete"], help="command to execute on the configuration given through stdin")
+args = argparser.parse_args()
 
-    if type == "error":
-        raise Exception(json)
+# calls the method given as parameter
+globals()[args.command]()
 
-    # this will wait for lxd asynchronous operations to be finished
-    # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
-    if type == "async":
-        return session.get(api_url + json.get("operation") + "/wait")
-
-
-# entrypoint
-if __name__ == "__main__":
-    # opens a unix socket session and adds the hook defined above
-    session = requests_unixsocket.Session()
-    session.hooks["response"].append(hook)
-    api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
-
-    argparser = argparse.ArgumentParser(description="Define and run multi-container applications with LXD.")
-    argparser.add_argument("command", choices=["create", "start", "stop", "delete"],
-                           help="command to execute on the configuration given through stdin")
-    args = argparser.parse_args()
-
-    # loads the configuration from stdin (uses the yaml baseloader to preserve all strings)
-    config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
-
-    # calls the method given as parameter
-    globals()[args.command]()
-
-    session.close()
+session.close()
