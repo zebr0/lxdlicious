@@ -33,4 +33,4 @@ containers:
       mode: pull
       server: https://images.linuxcontainers.org
       protocol: simplestreams
-      alias: ubuntu/xenial
+      alias: ubuntu/bionic
