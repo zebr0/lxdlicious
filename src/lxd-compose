@@ -14,6 +14,8 @@ api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 # see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
 def hook(response, **kwargs):
     json = response.json()
+    session_logger.debug(json)
+
     type = json.get("type")
 
     if type == "error":
@@ -22,12 +24,15 @@ def hook(response, **kwargs):
     # this will wait for lxd asynchronous operations to be finished
     # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
     if type == "async":
-        return session.get(api_url + json.get("operation") + "/wait")
+        wait_json = session.get(api_url + json.get("operation") + "/wait").json()
+        if wait_json.get("metadata").get("status_code") != 200:
+            raise Exception(wait_json)
 
 
 # opens a unix socket session and adds the hook defined above
 session = requests_unixsocket.Session()
 session.hooks["response"].append(hook)
+session_logger = logging.getLogger("lxd-compose.Session")
 
 # loads the configuration from stdin (uses the yaml baseloader to preserve all strings)
 config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
