@@ -1,3 +1,11 @@
+lxd-compose (1.0.2-0ubuntu1) bionic; urgency=medium
+
+  * fix: now correctly handles async operations' failure
+  * now uses the standard logging api
+  * little code and tests rework
+
+ -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Mon, 03 Sep 2018 17:50:00 +0100
+
 lxd-compose (1.0.1-0ubuntu1) xenial; urgency=medium
 
   * fix: now handles empty configuration or "sections"
