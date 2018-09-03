@@ -34,14 +34,14 @@ config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
 
 # parent (abstract) class for all lxd resources
 class Resource:
-    def __init__(self, collection_url, config):
+    def __init__(self, collection_url, resource_config):
         # relative api url for this type of lxd resource (for example: "/1.0/containers")
         self._collection_url = collection_url
         # the configuration of this specific resource
-        self._config = config
+        self._resource_config = resource_config
 
     def _get_name(self):
-        return self._config.get("name")
+        return self._resource_config.get("name")
 
     # returns the full api url for this type of lxd resource
     def _get_full_collection_url(self):
@@ -64,7 +64,7 @@ class Resource:
         # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
             print("creating", self._collection_url, self._get_name())
-            session.post(self._get_full_collection_url(), json=self._config)
+            session.post(self._get_full_collection_url(), json=self._resource_config)
             if not self.exists():
                 raise Exception("resource creation failed")
 
@@ -79,23 +79,23 @@ class Resource:
 
 
 class StoragePool(Resource):
-    def __init__(self, config):
-        super().__init__("/1.0/storage-pools", config)
+    def __init__(self, resource_config):
+        super().__init__("/1.0/storage-pools", resource_config)
 
 
 class Network(Resource):
-    def __init__(self, config):
-        super().__init__("/1.0/networks", config)
+    def __init__(self, resource_config):
+        super().__init__("/1.0/networks", resource_config)
 
 
 class Profile(Resource):
-    def __init__(self, config):
-        super().__init__("/1.0/profiles", config)
+    def __init__(self, resource_config):
+        super().__init__("/1.0/profiles", resource_config)
 
 
 class Container(Resource):
-    def __init__(self, config):
-        super().__init__("/1.0/containers", config)
+    def __init__(self, resource_config):
+        super().__init__("/1.0/containers", resource_config)
 
     # returns whether this specific container is running or not...
     def is_running(self):
