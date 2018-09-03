@@ -1,6 +1,7 @@
 #!/usr/bin/python3 -u
 
 import argparse
+import logging
 import sys
 
 import requests_unixsocket
@@ -39,6 +40,8 @@ class Resource:
         self._collection_url = collection_url
         # the configuration of this specific resource
         self._resource_config = resource_config
+        # the logger for this resource
+        self._logger = logging.getLogger("lxd-compose." + self.__class__.__name__)
 
     def _get_name(self):
         return self._resource_config.get("name")
@@ -63,7 +66,7 @@ class Resource:
     def create(self):
         # only does something if the resource doesn't already exist (idempotence)
         if not self.exists():
-            print("creating", self._collection_url, self._get_name())
+            self._logger.info("creating %s", self._get_name())
             session.post(self._get_full_collection_url(), json=self._resource_config)
             if not self.exists():
                 raise Exception("resource creation failed")
@@ -72,7 +75,7 @@ class Resource:
     def delete(self):
         # only does something if the resource exists (idempotence)
         if self.exists():
-            print("deleting", self._collection_url, self._get_name())
+            self._logger.info("deleting %s", self._get_name())
             session.delete(self._get_full_element_url())
             if self.exists():
                 raise Exception("resource deletion failed")
@@ -109,7 +112,7 @@ class Container(Resource):
 
         # only does something if the resource isn't already running (idempotence)
         if not self.is_running():
-            print("starting", self._collection_url, self._get_name())
+            self._logger.info("starting %s", self._get_name())
             session.put(self._get_full_element_url() + "/state", json={"action": "start"})
             if not self.is_running():
                 raise Exception("container starting failed")
@@ -121,7 +124,7 @@ class Container(Resource):
 
         # only does something if the resource is running (idempotence)
         if self.is_running():
-            print("stopping", self._collection_url, self._get_name())
+            self._logger.info("stopping %s", self._get_name())
             session.put(self._get_full_element_url() + "/state", json={"action": "stop"})
             if self.is_running():
                 raise Exception("container stopping failed")
@@ -161,7 +164,15 @@ def delete():
 
 argparser = argparse.ArgumentParser(description="Define and run multi-container applications with LXD.")
 argparser.add_argument("command", choices=["create", "start", "stop", "delete"], help="command to execute on the configuration given through stdin")
+argparser.add_argument("--debug", action="store_true")
 args = argparser.parse_args()
+
+# configures the root logger
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter("{asctime} | {levelname:<7.7} | {name:<25.25} | {message}", style="{"))
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
+root_logger.addHandler(stream_handler)
 
 # calls the method given as parameter
 globals()[args.command]()
