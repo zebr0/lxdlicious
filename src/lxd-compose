@@ -41,49 +41,60 @@ config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
 # parent (abstract) class for all lxd resources
 class Resource:
     def __init__(self, collection_url, resource_config):
-        # relative api url for this type of lxd resource (for example: "/1.0/containers")
+        # relative url for this type of lxd resource (for example: "/1.0/containers")
         self._collection_url = collection_url
         # the configuration of this specific resource
         self._resource_config = resource_config
         # the logger for this resource
         self._logger = logging.getLogger("lxd-compose." + self.__class__.__name__)
 
-    def _get_name(self):
-        return self._resource_config.get("name")
-
-    # returns the full api url for this type of lxd resource
-    def _get_full_collection_url(self):
-        return api_url + self._collection_url
-
-    # returns the full api url for this specific resource
-    def _get_full_element_url(self):
-        return self._get_full_collection_url() + "/" + self._get_name()
-
-    # returns whether this specific resource exists or not...
-    def exists(self):
-        # by checking if the resource's name is listed in the response of the collection url
-        return any(filter(
-            lambda a: a == self._collection_url + "/" + self._get_name(),
-            session.get(self._get_full_collection_url()).json().get("metadata")
-        ))
-
     # creates this specific resource
     def create(self):
+        self._log("checking")
         # only does something if the resource doesn't already exist (idempotence)
-        if not self.exists():
-            self._logger.info("creating %s", self._get_name())
+        if not self._exists():
+            self._log("creating")
             session.post(self._get_full_collection_url(), json=self._resource_config)
-            if not self.exists():
+            if not self._exists():
                 raise Exception("resource creation failed")
 
     # deletes this specific resource
     def delete(self):
+        self._log("checking")
         # only does something if the resource exists (idempotence)
-        if self.exists():
-            self._logger.info("deleting %s", self._get_name())
+        if self._exists():
+            self._log("deleting")
             session.delete(self._get_full_element_url())
-            if self.exists():
+            if self._exists():
                 raise Exception("resource deletion failed")
+
+    # returns whether this specific resource exists or not...
+    def _exists(self):
+        # by checking if the resource's name is listed in the response of the collection url
+        return any(filter(
+            lambda a: a == self._get_element_url(),
+            session.get(self._get_full_collection_url()).json().get("metadata")
+        ))
+
+    # returns the full url for this type of lxd resource
+    def _get_full_collection_url(self):
+        return api_url + self._collection_url
+
+    # returns the resource's name
+    def _get_name(self):
+        return self._resource_config.get("name")
+
+    # returns the resource's relative url
+    def _get_element_url(self):
+        return self._collection_url + "/" + self._get_name()
+
+    # returns the resource's full url
+    def _get_full_element_url(self):
+        return self._get_full_collection_url() + "/" + self._get_name()
+
+    # default logging function
+    def _log(self, action):
+        self._logger.info("%s %s", action, self._get_element_url())
 
 
 class StoragePool(Resource):
@@ -105,34 +116,34 @@ class Container(Resource):
     def __init__(self, resource_config):
         super().__init__("/1.0/containers", resource_config)
 
-    # returns whether this specific container is running or not...
-    def is_running(self):
-        # by checking its status in the metadata
-        return self.exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
-
-    # starts this specific container
+    # starts the container
     def start(self):
-        if not self.exists():
+        if not self._exists():
             raise Exception("container starting failed: container must exist")
 
         # only does something if the resource isn't already running (idempotence)
-        if not self.is_running():
-            self._logger.info("starting %s", self._get_name())
+        if not self._is_running():
+            self._log("starting")
             session.put(self._get_full_element_url() + "/state", json={"action": "start"})
-            if not self.is_running():
+            if not self._is_running():
                 raise Exception("container starting failed")
 
-    # stops this specific container
+    # stops the container
     def stop(self):
-        if not self.exists():
+        if not self._exists():
             raise Exception("container stopping failed: container must exist")
 
         # only does something if the resource is running (idempotence)
-        if self.is_running():
-            self._logger.info("stopping %s", self._get_name())
+        if self._is_running():
+            self._log("stopping")
             session.put(self._get_full_element_url() + "/state", json={"action": "stop"})
-            if self.is_running():
+            if self._is_running():
                 raise Exception("container stopping failed")
+
+    # returns whether the container is running or not...
+    def _is_running(self):
+        # by checking its status in the metadata
+        return self._exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
 
 
 def create():
