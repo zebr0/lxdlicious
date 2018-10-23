@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+import time
 
 import requests_unixsocket
 import yaml
@@ -57,6 +58,11 @@ class Resource:
             session.post(self._get_full_collection_url(), json=self._resource_config)
             if not self._exists():
                 raise Exception("resource creation failed")
+            self._post_create()
+
+    # override to execute post-creation code on the resource
+    def _post_create(self):
+        pass
 
     # deletes this specific resource
     def delete(self):
@@ -146,6 +152,21 @@ class Container(Resource):
         return self._exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
 
 
+class ParentContainer(Container):
+    """
+    Parent containers can be used as source for regular containers instead of official images and, as such, will be created beforehand.
+    Upon creation they will be started and expected to stop once the configuration takes place (see test/nominal.yml).
+    Failure to do so will result in an infinite loop that can only be solved by manually stopping the container or killing the lxd-compose process.
+    """
+
+    def _post_create(self):
+        self.start()
+
+        self._log("waiting for completion")
+        while self._is_running():
+            time.sleep(5)
+
+
 def create():
     for item in config.get("storage_pools") or []:
         StoragePool(item).create()
@@ -153,6 +174,8 @@ def create():
         Network(item).create()
     for item in config.get("profiles") or []:
         Profile(item).create()
+    for item in config.get("parent-containers") or []:
+        ParentContainer(item).create()
     for item in config.get("containers") or []:
         Container(item).create()
 
@@ -170,6 +193,8 @@ def stop():
 def delete():
     for item in config.get("containers") or []:
         Container(item).delete()
+    for item in config.get("parent-containers") or []:
+        ParentContainer(item).delete()
     for item in config.get("profiles") or []:
         Profile(item).delete()
     for item in config.get("networks") or []:
