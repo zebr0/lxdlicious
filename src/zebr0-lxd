@@ -1,11 +1,9 @@
 #!/usr/bin/python3 -u
 
-import argparse
 import logging
-import sys
 
 import requests_unixsocket
-import yaml
+import zebr0
 
 api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
 
@@ -32,10 +30,7 @@ def hook(response, **kwargs):
 # opens a unix socket session and adds the hook defined above
 session = requests_unixsocket.Session()
 session.hooks["response"].append(hook)
-session_logger = logging.getLogger("lxd-compose.Session")
-
-# loads the configuration from stdin (uses the yaml baseloader to preserve all strings)
-config = yaml.load(sys.stdin, Loader=yaml.BaseLoader) or {}
+session_logger = logging.getLogger("zebr0-lxd.Session")
 
 
 # parent (abstract) class for all lxd resources
@@ -46,7 +41,7 @@ class Resource:
         # the configuration of this specific resource
         self._resource_config = resource_config
         # the logger for this resource
-        self._logger = logging.getLogger("lxd-compose." + self.__class__.__name__)
+        self._logger = logging.getLogger("zebr0-lxd." + self.__class__.__name__)
 
     # creates this specific resource
     def create(self):
@@ -118,9 +113,6 @@ class Container(Resource):
 
     # starts the container
     def start(self):
-        if not self._exists():
-            raise Exception("container starting failed: container must exist")
-
         # only does something if the resource isn't already running (idempotence)
         if not self._is_running():
             self._log("starting")
@@ -130,9 +122,6 @@ class Container(Resource):
 
     # stops the container
     def stop(self):
-        if not self._exists():
-            raise Exception("container stopping failed: container must exist")
-
         # only does something if the resource is running (idempotence)
         if self._is_running():
             self._log("stopping")
@@ -147,48 +136,32 @@ class Container(Resource):
 
 
 def create():
-    for item in config.get("storage_pools") or []:
-        StoragePool(item).create()
-    for item in config.get("networks") or []:
-        Network(item).create()
-    for item in config.get("profiles") or []:
-        Profile(item).create()
-    for item in config.get("containers") or []:
-        Container(item).create()
-
-
-def start():
-    for item in config.get("containers") or []:
-        Container(item).start()
-
-
-def stop():
-    for item in config.get("containers") or []:
-        Container(item).stop()
+    container.create()
+    container.start()
 
 
 def delete():
-    for item in config.get("containers") or []:
-        Container(item).delete()
-    for item in config.get("profiles") or []:
-        Profile(item).delete()
-    for item in config.get("networks") or []:
-        Network(item).delete()
-    for item in config.get("storage_pools") or []:
-        StoragePool(item).delete()
+    container.stop()
+    container.delete()
 
 
-argparser = argparse.ArgumentParser(description="Define and run multi-container applications with LXD.")
-argparser.add_argument("command", choices=["create", "start", "stop", "delete"], help="command to execute on the configuration given through stdin")
-argparser.add_argument("--debug", action="store_true")
+argparser = zebr0.ArgumentParser(description="zebr0 client to deploy an application to a local LXD environment")
+argparser.add_argument("command", choices=["create", "delete"])
 args = argparser.parse_args()
 
-# configures the root logger
-stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(logging.Formatter("{asctime} | {levelname:<7.7} | {name:<25.25} | {message}", style="{"))
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
-root_logger.addHandler(stream_handler)
+zebr0_service = zebr0.Service(args)
+
+container = Container({
+    "name": "-".join([args.project, args.stage]),
+    "source": {
+        "type": "image",
+        "mode": "pull",
+        "server": "https://cloud-images.ubuntu.com/daily",
+        "protocol": "simplestreams",
+        "alias": "bionic"
+    },
+    "config": {"user.user-data": zebr0_service.lookup("vm-user-data")}
+})
 
 # calls the method given as parameter
 globals()[args.command]()

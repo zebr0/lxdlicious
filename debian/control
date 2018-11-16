@@ -1,11 +1,11 @@
-Source: lxd-compose
+Source: zebr0-lxd
 Section: utils
 Priority: optional
 Maintainer: Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>
 Build-Depends: debhelper (>=9)
 Standards-Version: 3.9.7
 
-Package: lxd-compose
+Package: zebr0-lxd
 Architecture: all
-Depends: ${misc:Depends}, python3, lxd, python3-yaml, python3-requests-unixsocket
-Description: Define and run multi-container applications with LXD
+Depends: ${misc:Depends}, python3, lxd, python3-requests-unixsocket
+Description: zebr0 client to deploy an application to a local LXD environment

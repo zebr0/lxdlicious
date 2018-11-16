@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: lxd-compose
-Source: https://github.com/zebr0/lxd-compose
+Upstream-Name: zebr0-lxd
+Source: https://github.com/zebr0/zebr0-lxd
 
 Files: *
 Copyright: 2018 zebr0

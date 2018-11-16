@@ -1,27 +1,5 @@
-lxd-compose (1.1.0-0ubuntu1) bionic; urgency=medium
-
-  * added a "parent-containers" section, to use as source instead of official images
-  * fix: log messages when checking the status of a resource
-
- -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Wed, 24 Oct 2018 13:30:00 +0100
-
-lxd-compose (1.0.2-0ubuntu1) bionic; urgency=medium
-
-  * fix: now correctly handles async operations' failure
-  * now uses the standard logging api
-  * little code and tests rework
-
- -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Mon, 03 Sep 2018 17:50:00 +0100
-
-lxd-compose (1.0.1-0ubuntu1) xenial; urgency=medium
-
-  * fix: now handles empty configuration or "sections"
-  * fix: now compatible with preseed "lxd init" yaml
-
- -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Sat, 14 Apr 2018 20:55:00 +0100
-
-lxd-compose (1.0.0-0ubuntu1) xenial; urgency=medium
+zebr0-lxd (0.1.0-0ubuntu1) bionic; urgency=medium
 
   * Initial release
 
- -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Sat, 14 Apr 2018 14:00:00 +0100
+ -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Fri, 16 Nov 2018 15:40:00 +0100
