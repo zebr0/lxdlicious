@@ -1,3 +1,9 @@
+zebr0-lxd (0.2.0-0ubuntu1) bionic; urgency=medium
+
+  * now using a specific userdata configuration for lxd
+
+ -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Mon, 20 May 2019 12:35:00 +0100
+
 zebr0-lxd (0.1.0-0ubuntu1) bionic; urgency=medium
 
   * Initial release

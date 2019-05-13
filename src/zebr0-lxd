@@ -160,7 +160,7 @@ container = Container({
         "protocol": "simplestreams",
         "alias": "bionic"
     },
-    "config": {"user.user-data": zebr0_service.lookup("vm-user-data")}
+    "config": {"user.user-data": zebr0_service.lookup("lxd-user-data")}
 })
 
 # calls the method given as parameter
