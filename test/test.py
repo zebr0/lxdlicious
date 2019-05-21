@@ -25,9 +25,9 @@ def run(command):
 # ensures the test resources don't exist before continuing
 run("../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
 
-# test creating a container (twice, for idempotence)
-run("../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
-run("../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
+# test creating and running a container (twice, for idempotence)
+run("../src/zebr0-lxd run -u http://localhost:8000 -p project -s stage")
+run("../src/zebr0-lxd run -u http://localhost:8000 -p project -s stage")
 
 # opens a unix socket session to call the lxd api
 session = requests_unixsocket.Session()
@@ -50,7 +50,8 @@ assert container_json == {'error': '',
                                        'description': '',
                                        'devices': {},
                                        'ephemeral': False,
-                                       'expanded_config': {'image.architecture': 'amd64',
+                                       'expanded_config': {'boot.autostart': 'false',
+                                                           'image.architecture': 'amd64',
                                                            'image.label': 'daily',
                                                            'image.os': 'ubuntu',
                                                            'image.release': 'bionic',
@@ -80,6 +81,54 @@ assert container_json == {'error': '',
 run("../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
 run("../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
 assert session.get(api_url + "/1.0/containers/project-stage").json().get("error_code") == 404
+
+# test creating a container (twice, for idempotence)
+run("../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
+run("../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
+
+# cleans the api output of volatile information before testing
+container_json = session.get(api_url + "/1.0/containers/project-stage").json()
+container_json.get("metadata").pop("created_at")
+container_json.get("metadata").pop("last_used_at")
+container_json.get("metadata").pop("config")
+container_json.get("metadata").get("expanded_config").pop("volatile.base_image")
+container_json.get("metadata").get("expanded_config").pop("volatile.idmap.next")
+container_json.get("metadata").get("expanded_config").pop("volatile.last_state.idmap")
+container_json.get("metadata").get("expanded_config").pop("volatile.eth0.hwaddr")
+container_json.get("metadata").get("expanded_config").pop("image.description")
+container_json.get("metadata").get("expanded_config").pop("image.serial")
+assert container_json == {'error': '',
+                          'error_code': 0,
+                          'metadata': {'architecture': 'x86_64',
+                                       'description': '',
+                                       'devices': {},
+                                       'ephemeral': False,
+                                       'expanded_config': {'boot.autostart': 'true',
+                                                           'image.architecture': 'amd64',
+                                                           'image.label': 'daily',
+                                                           'image.os': 'ubuntu',
+                                                           'image.release': 'bionic',
+                                                           'image.version': '18.04',
+                                                           'user.user-data': '#cloud-config',
+                                                           'volatile.apply_template': 'create',
+                                                           'volatile.eth0.name': 'eth0',
+                                                           'volatile.idmap.base': '0'},
+                                       'expanded_devices': {'eth0': {'nictype': 'bridged',
+                                                                     'parent': 'lxd0',
+                                                                     'type': 'nic'},
+                                                            'root': {'path': '/',
+                                                                     'pool': 'default',
+                                                                     'type': 'disk'}},
+                                       'location': '',
+                                       'name': 'project-stage',
+                                       'profiles': ['default'],
+                                       'stateful': False,
+                                       'status': 'Stopped',
+                                       'status_code': 102},
+                          'operation': '',
+                          'status': 'Success',
+                          'status_code': 200,
+                          'type': 'sync'}
 
 session.close()
 

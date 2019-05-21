@@ -92,24 +92,22 @@ class Resource:
         self._logger.info("%s %s", action, self._get_element_url())
 
 
-class StoragePool(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/storage-pools", resource_config)
-
-
-class Network(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/networks", resource_config)
-
-
-class Profile(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/profiles", resource_config)
-
-
 class Container(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/containers", resource_config)
+    def __init__(self, autostart="false"):
+        super().__init__("/1.0/containers", {
+            "name": "-".join([args.project, args.stage]),
+            "source": {
+                "type": "image",
+                "mode": "pull",
+                "server": "https://cloud-images.ubuntu.com/daily",
+                "protocol": "simplestreams",
+                "alias": "bionic"
+            },
+            "config": {
+                "boot.autostart": autostart,
+                "user.user-data": zebr0_service.lookup("lxd-user-data")
+            }
+        })
 
     # starts the container
     def start(self):
@@ -135,33 +133,28 @@ class Container(Resource):
         return self._exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
 
 
-def create():
+def run():
+    container = Container()
     container.create()
     container.start()
 
 
+def create():
+    container = Container(autostart="true")
+    container.create()
+
+
 def delete():
+    container = Container()
     container.stop()
     container.delete()
 
 
 argparser = zebr0.ArgumentParser(description="zebr0 client to deploy an application to a local LXD environment")
-argparser.add_argument("command", choices=["create", "delete"])
+argparser.add_argument("command", choices=["run", "create", "delete"])
 args = argparser.parse_args()
 
 zebr0_service = zebr0.Service(args)
-
-container = Container({
-    "name": "-".join([args.project, args.stage]),
-    "source": {
-        "type": "image",
-        "mode": "pull",
-        "server": "https://cloud-images.ubuntu.com/daily",
-        "protocol": "simplestreams",
-        "alias": "bionic"
-    },
-    "config": {"user.user-data": zebr0_service.lookup("lxd-user-data")}
-})
 
 # calls the method given as parameter
 globals()[args.command]()
