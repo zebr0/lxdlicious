@@ -3,6 +3,7 @@
 import logging
 
 import requests_unixsocket
+import yaml
 import zebr0
 
 api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
@@ -92,22 +93,24 @@ class Resource:
         self._logger.info("%s %s", action, self._get_element_url())
 
 
+class StoragePool(Resource):
+    def __init__(self, resource_config):
+        super().__init__("/1.0/storage-pools", resource_config)
+
+
+class Network(Resource):
+    def __init__(self, resource_config):
+        super().__init__("/1.0/networks", resource_config)
+
+
+class Profile(Resource):
+    def __init__(self, resource_config):
+        super().__init__("/1.0/profiles", resource_config)
+
+
 class Container(Resource):
-    def __init__(self, autostart="false"):
-        super().__init__("/1.0/containers", {
-            "name": "-".join([args.project, args.stage]),
-            "source": {
-                "type": "image",
-                "mode": "pull",
-                "server": "https://cloud-images.ubuntu.com/daily",
-                "protocol": "simplestreams",
-                "alias": "bionic"
-            },
-            "config": {
-                "boot.autostart": autostart,
-                "user.user-data": zebr0_service.lookup("lxd-user-data")
-            }
-        })
+    def __init__(self, resource_config):
+        super().__init__("/1.0/containers", resource_config)
 
     # starts the container
     def start(self):
@@ -133,28 +136,46 @@ class Container(Resource):
         return self._exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
 
 
-def run():
-    container = Container()
-    container.create()
-    container.start()
-
-
 def create():
-    container = Container(autostart="true")
-    container.create()
+    for item in config.get("storage_pools") or []:
+        StoragePool(item).create()
+    for item in config.get("networks") or []:
+        Network(item).create()
+    for item in config.get("profiles") or []:
+        Profile(item).create()
+    for item in config.get("containers") or []:
+        Container(item).create()
+
+
+def start():
+    for item in config.get("containers") or []:
+        Container(item).start()
+
+
+def stop():
+    for item in config.get("containers") or []:
+        Container(item).stop()
 
 
 def delete():
-    container = Container()
-    container.stop()
-    container.delete()
+    for item in config.get("containers") or []:
+        Container(item).delete()
+    for item in config.get("profiles") or []:
+        Profile(item).delete()
+    for item in config.get("networks") or []:
+        Network(item).delete()
+    for item in config.get("storage_pools") or []:
+        StoragePool(item).delete()
 
 
 argparser = zebr0.ArgumentParser(description="zebr0 client to deploy an application to a local LXD environment")
-argparser.add_argument("command", choices=["run", "create", "delete"])
+argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
 args = argparser.parse_args()
 
 zebr0_service = zebr0.Service(args)
+
+# loads the configuration from zebr0 (uses the yaml baseloader to preserve all strings)
+config = yaml.load(zebr0_service.lookup("lxd-stack"), Loader=yaml.BaseLoader)
 
 # calls the method given as parameter
 globals()[args.command]()

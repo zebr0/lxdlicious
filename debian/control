@@ -7,5 +7,5 @@ Standards-Version: 3.9.7
 
 Package: zebr0-lxd
 Architecture: all
-Depends: ${misc:Depends}, python3, lxd, python3-requests-unixsocket
+Depends: ${misc:Depends}, zebr0-core, lxd, python3-requests-unixsocket
 Description: zebr0 client to deploy an application to a local LXD environment

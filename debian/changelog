@@ -1,3 +1,9 @@
+zebr0-lxd (0.4.0-0ubuntu1) bionic; urgency=medium
+
+  * reinstated the stack management, this time fetched from zebr0
+
+ -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Fri, 15 Nov 2019 11:40:00 +0100
+
 zebr0-lxd (0.3.0-0ubuntu1) bionic; urgency=medium
 
   * reworked the way to create and start a container: instant or delayed
