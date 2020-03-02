@@ -1,3 +1,9 @@
+zebr0-lxd (0.5.0-0ubuntu1) bionic; urgency=medium
+
+  * removed the dependency to lxd deb package, so that lxd can be installed with snap
+
+ -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Mon, 02 Mar 2020 17:10:00 +0100
+
 zebr0-lxd (0.4.0-0ubuntu1) bionic; urgency=medium
 
   * reinstated the stack management, this time fetched from zebr0
