@@ -6,7 +6,7 @@ import requests_unixsocket
 import yaml
 import zebr0
 
-api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
+api_url = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 
 # this "hook" will be executed after each request to allow some generic treatment of the response

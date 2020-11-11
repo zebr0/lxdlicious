@@ -24,23 +24,23 @@ def run(command):
 
 # opens a unix socket session to call the lxd api
 session = requests_unixsocket.Session()
-api_url = "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket"
+api_url = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 # ensures the test resources don't exist before continuing
-run("../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
 
 # test creating and running a container (twice, for idempotence)
-run("../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
-run("../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd create -u http://localhost:8000 -p project -s stage")
 assert session.get(api_url + "/1.0/storage-pools/nominal-storage-pool").json() == {'error': '',
                                                                                    'error_code': 0,
-                                                                                   'metadata': {'config': {'source': '/var/lib/lxd/storage-pools/nominal-storage-pool'},
+                                                                                   'metadata': {'config': {'source': '/var/snap/lxd/common/lxd/storage-pools/nominal-storage-pool'},
                                                                                                 'description': '',
                                                                                                 'driver': 'dir',
                                                                                                 'locations': ['none'],
                                                                                                 'name': 'nominal-storage-pool',
                                                                                                 'status': 'Created',
-                                                                                                'used_by': ['/1.0/containers/dummy-container', '/1.0/profiles/nominal-profile']},
+                                                                                                'used_by': ['/1.0/instances/dummy-container', '/1.0/profiles/nominal-profile']},
                                                                                    'operation': '',
                                                                                    'status': 'Success',
                                                                                    'status_code': 200,
@@ -58,7 +58,7 @@ assert session.get(api_url + "/1.0/networks/nominalnetwork0").json() == {'error'
                                                                                       'name': 'nominalnetwork0',
                                                                                       'status': 'Created',
                                                                                       'type': 'bridge',
-                                                                                      'used_by': ['/1.0/containers/dummy-container']},
+                                                                                      'used_by': ['/1.0/instances/dummy-container', '/1.0/profiles/nominal-profile']},
                                                                          'operation': '',
                                                                          'status': 'Success',
                                                                          'status_code': 200,
@@ -74,7 +74,7 @@ assert session.get(api_url + "/1.0/profiles/nominal-profile").json() == {'error'
                                                                                                            'pool': 'nominal-storage-pool',
                                                                                                            'type': 'disk'}},
                                                                                       'name': 'nominal-profile',
-                                                                                      'used_by': ['/1.0/containers/dummy-container']},
+                                                                                      'used_by': ['/1.0/instances/dummy-container']},
                                                                          'operation': '',
                                                                          'status': 'Success',
                                                                          'status_code': 200,
@@ -100,6 +100,7 @@ assert container_json == {'error': '',
                                                            'image.label': 'daily',
                                                            'image.os': 'ubuntu',
                                                            'image.release': 'bionic',
+                                                           'image.type': 'squashfs',
                                                            'image.version': '18.04',
                                                            'volatile.apply_template': 'create',
                                                            'volatile.eth0.name': 'eth0',
@@ -110,30 +111,31 @@ assert container_json == {'error': '',
                                                             'root': {'path': '/',
                                                                      'pool': 'nominal-storage-pool',
                                                                      'type': 'disk'}},
-                                       'location': '',
+                                       'location': 'none',
                                        'name': 'dummy-container',
                                        'profiles': ['nominal-profile'],
                                        'stateful': False,
                                        'status': 'Stopped',
-                                       'status_code': 102},
+                                       'status_code': 102,
+                                       'type': 'container'},
                           'operation': '',
                           'status': 'Success',
                           'status_code': 200,
                           'type': 'sync'}
 
 # test starting a stack (twice, for idempotence)
-run("../src/zebr0-lxd start -u http://localhost:8000 -p project -s stage")
-run("../src/zebr0-lxd start -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd start -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd start -u http://localhost:8000 -p project -s stage")
 assert session.get(api_url + "/1.0/containers/dummy-container").json().get("metadata").get("status") == "Running"
 
 # test stopping a stack (twice, for idempotence)
-run("../src/zebr0-lxd stop -u http://localhost:8000 -p project -s stage")
-run("../src/zebr0-lxd stop -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd stop -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd stop -u http://localhost:8000 -p project -s stage")
 assert session.get(api_url + "/1.0/containers/dummy-container").json().get("metadata").get("status") == "Stopped"
 
 # test deleting a container (twice, for idempotence)
-run("../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
-run("../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
+run("sudo ../src/zebr0-lxd delete -u http://localhost:8000 -p project -s stage")
 assert session.get(api_url + "/1.0/storage-pools/nominal-storage-pool").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/networks/nominalnetwork0").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/profiles/nominal-profile").json().get("error_code") == 404
