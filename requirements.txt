@@ -1,0 +1,9 @@
+zebr0
+requests-unixsocket
+PyYAML
+
+pytest
+
+setuptools
+wheel
+twine
