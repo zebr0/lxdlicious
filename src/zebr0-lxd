@@ -168,14 +168,14 @@ def delete():
         StoragePool(item).delete()
 
 
-argparser = zebr0.ArgumentParser(description="zebr0 client to deploy an application to a local LXD environment")
+argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
 argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
 args = argparser.parse_args()
 
-zebr0_service = zebr0.Service(args)
+zebr0_service = zebr0.Client(args.url, args.levels, args.cache, args.configuration_file)
 
 # loads the configuration from zebr0 (uses the yaml baseloader to preserve all strings)
-config = yaml.load(zebr0_service.lookup("lxd-stack"), Loader=yaml.BaseLoader)
+config = yaml.load(zebr0_service.get("lxd-stack"), Loader=yaml.BaseLoader)
 
 # calls the method given as parameter
 globals()[args.command]()
