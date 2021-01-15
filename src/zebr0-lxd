@@ -11,18 +11,18 @@ api_url = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 # this "hook" will be executed after each request to allow some generic treatment of the response
 # see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
-def hook(response, **kwargs):
+def hook(response, **_):
     json = response.json()
     session_logger.debug(json)
 
-    type = json.get("type")
+    _type = json.get("type")
 
-    if type == "error":
+    if _type == "error":
         raise Exception(json)
 
     # this will wait for lxd asynchronous operations to be finished
     # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
-    if type == "async":
+    if _type == "async":
         wait_json = session.get(api_url + json.get("operation") + "/wait").json()
         if wait_json.get("metadata").get("status_code") != 200:
             raise Exception(wait_json)
