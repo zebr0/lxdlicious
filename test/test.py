@@ -27,11 +27,11 @@ session = requests_unixsocket.Session()
 api_url = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 # ensures the test resources don't exist before continuing
-run("../src/zebr0-lxd delete -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd delete -u http://localhost:8000 -l project stage")
 
 # test creating and running a container (twice, for idempotence)
-run("../src/zebr0-lxd create -u http://localhost:8000 -l project stage")
-run("../src/zebr0-lxd create -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd create -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd create -u http://localhost:8000 -l project stage")
 assert session.get(api_url + "/1.0/storage-pools/nominal-storage-pool").json() == {'error': '',
                                                                                    'error_code': 0,
                                                                                    'metadata': {'config': {'source': '/var/snap/lxd/common/lxd/storage-pools/nominal-storage-pool'},
@@ -124,18 +124,18 @@ assert container_json == {'error': '',
                           'type': 'sync'}
 
 # test starting a stack (twice, for idempotence)
-run("../src/zebr0-lxd start -u http://localhost:8000 -l project stage")
-run("../src/zebr0-lxd start -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd start -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd start -u http://localhost:8000 -l project stage")
 assert session.get(api_url + "/1.0/containers/dummy-container").json().get("metadata").get("status") == "Running"
 
 # test stopping a stack (twice, for idempotence)
-run("../src/zebr0-lxd stop -u http://localhost:8000 -l project stage")
-run("../src/zebr0-lxd stop -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd stop -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd stop -u http://localhost:8000 -l project stage")
 assert session.get(api_url + "/1.0/containers/dummy-container").json().get("metadata").get("status") == "Stopped"
 
 # test deleting a container (twice, for idempotence)
-run("../src/zebr0-lxd delete -u http://localhost:8000 -l project stage")
-run("../src/zebr0-lxd delete -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd delete -u http://localhost:8000 -l project stage")
+run("../zebr0-lxd delete -u http://localhost:8000 -l project stage")
 assert session.get(api_url + "/1.0/storage-pools/nominal-storage-pool").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/networks/nominalnetwork0").json().get("error_code") == 404
 assert session.get(api_url + "/1.0/profiles/nominal-profile").json().get("error_code") == 404

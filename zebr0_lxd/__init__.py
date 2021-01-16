@@ -1,5 +1,3 @@
-#!/usr/bin/python3 -u
-
 import logging
 from typing import Optional, List
 
@@ -182,7 +180,3 @@ def main(args: Optional[List[str]] = None) -> None:
     globals()[args.command](session, config)
 
     session.close()
-
-
-if __name__ == '__main__':
-    main()

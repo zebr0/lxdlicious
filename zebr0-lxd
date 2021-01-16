@@ -1,0 +1,5 @@
+#!/usr/bin/python3 -u
+
+import zebr0_lxd
+
+zebr0_lxd.main()
