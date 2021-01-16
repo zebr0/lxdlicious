@@ -1,6 +1,7 @@
 #!/usr/bin/python3 -u
 
 import logging
+from typing import Optional, List
 
 import requests_unixsocket
 import yaml
@@ -9,34 +10,10 @@ import zebr0
 api_url = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 
-# this "hook" will be executed after each request to allow some generic treatment of the response
-# see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
-def hook(response, **_):
-    json = response.json()
-    session_logger.debug(json)
-
-    _type = json.get("type")
-
-    if _type == "error":
-        raise Exception(json)
-
-    # this will wait for lxd asynchronous operations to be finished
-    # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
-    if _type == "async":
-        wait_json = session.get(api_url + json.get("operation") + "/wait").json()
-        if wait_json.get("metadata").get("status_code") != 200:
-            raise Exception(wait_json)
-
-
-# opens a unix socket session and adds the hook defined above
-session = requests_unixsocket.Session()
-session.hooks["response"].append(hook)
-session_logger = logging.getLogger("zebr0-lxd.Session")
-
-
 # parent (abstract) class for all lxd resources
 class Resource:
-    def __init__(self, collection_url, resource_config):
+    def __init__(self, session, collection_url, resource_config):
+        self._session = session
         # relative url for this type of lxd resource (for example: "/1.0/containers")
         self._collection_url = collection_url
         # the configuration of this specific resource
@@ -50,7 +27,7 @@ class Resource:
         # only does something if the resource doesn't already exist (idempotence)
         if not self._exists():
             self._log("creating")
-            session.post(self._get_full_collection_url(), json=self._resource_config)
+            self._session.post(self._get_full_collection_url(), json=self._resource_config)
             if not self._exists():
                 raise Exception("resource creation failed")
 
@@ -60,7 +37,7 @@ class Resource:
         # only does something if the resource exists (idempotence)
         if self._exists():
             self._log("deleting")
-            session.delete(self._get_full_element_url())
+            self._session.delete(self._get_full_element_url())
             if self._exists():
                 raise Exception("resource deletion failed")
 
@@ -69,7 +46,7 @@ class Resource:
         # by checking if the resource's name is listed in the response of the collection url
         return any(filter(
             lambda a: a == self._get_element_url(),
-            session.get(self._get_full_collection_url()).json().get("metadata")
+            self._session.get(self._get_full_collection_url()).json().get("metadata")
         ))
 
     # returns the full url for this type of lxd resource
@@ -94,30 +71,30 @@ class Resource:
 
 
 class StoragePool(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/storage-pools", resource_config)
+    def __init__(self, session, resource_config):
+        super().__init__(session, "/1.0/storage-pools", resource_config)
 
 
 class Network(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/networks", resource_config)
+    def __init__(self, session, resource_config):
+        super().__init__(session, "/1.0/networks", resource_config)
 
 
 class Profile(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/profiles", resource_config)
+    def __init__(self, session, resource_config):
+        super().__init__(session, "/1.0/profiles", resource_config)
 
 
 class Container(Resource):
-    def __init__(self, resource_config):
-        super().__init__("/1.0/containers", resource_config)
+    def __init__(self, session, resource_config):
+        super().__init__(session, "/1.0/containers", resource_config)
 
     # starts the container
     def start(self):
         # only does something if the resource isn't already running (idempotence)
         if not self._is_running():
             self._log("starting")
-            session.put(self._get_full_element_url() + "/state", json={"action": "start"})
+            self._session.put(self._get_full_element_url() + "/state", json={"action": "start"})
             if not self._is_running():
                 raise Exception("container starting failed")
 
@@ -126,58 +103,86 @@ class Container(Resource):
         # only does something if the resource is running (idempotence)
         if self._is_running():
             self._log("stopping")
-            session.put(self._get_full_element_url() + "/state", json={"action": "stop"})
+            self._session.put(self._get_full_element_url() + "/state", json={"action": "stop"})
             if self._is_running():
                 raise Exception("container stopping failed")
 
     # returns whether the container is running or not...
     def _is_running(self):
         # by checking its status in the metadata
-        return self._exists() and session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
+        return self._exists() and self._session.get(self._get_full_element_url()).json().get("metadata").get("status") == "Running"
 
 
-def create():
+def create(session, config):
     for item in config.get("storage_pools") or []:
-        StoragePool(item).create()
+        StoragePool(session, item).create()
     for item in config.get("networks") or []:
-        Network(item).create()
+        Network(session, item).create()
     for item in config.get("profiles") or []:
-        Profile(item).create()
+        Profile(session, item).create()
     for item in config.get("containers") or []:
-        Container(item).create()
+        Container(session, item).create()
 
 
-def start():
+def start(session, config):
     for item in config.get("containers") or []:
-        Container(item).start()
+        Container(session, item).start()
 
 
-def stop():
+def stop(session, config):
     for item in config.get("containers") or []:
-        Container(item).stop()
+        Container(session, item).stop()
 
 
-def delete():
+def delete(session, config):
     for item in config.get("containers") or []:
-        Container(item).delete()
+        Container(session, item).delete()
     for item in config.get("profiles") or []:
-        Profile(item).delete()
+        Profile(session, item).delete()
     for item in config.get("networks") or []:
-        Network(item).delete()
+        Network(session, item).delete()
     for item in config.get("storage_pools") or []:
-        StoragePool(item).delete()
+        StoragePool(session, item).delete()
 
 
-argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
-argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
-args = argparser.parse_args()
+def main(args: Optional[List[str]] = None) -> None:
+    # this "hook" will be executed after each request to allow some generic treatment of the response
+    # see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
+    def hook(response, **_):
+        json = response.json()
+        session_logger.debug(json)
 
-zebr0_service = zebr0.Client(args.url, args.levels, args.cache, args.configuration_file)
+        _type = json.get("type")
 
-# loads the configuration from zebr0 (uses the yaml baseloader to preserve all strings)
-config = yaml.load(zebr0_service.get("lxd-stack"), Loader=yaml.BaseLoader)
+        if _type == "error":
+            raise Exception(json)
 
-# calls the method given as parameter
-globals()[args.command]()
+        # this will wait for lxd asynchronous operations to be finished
+        # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
+        if _type == "async":
+            wait_json = session.get(api_url + json.get("operation") + "/wait").json()
+            if wait_json.get("metadata").get("status_code") != 200:
+                raise Exception(wait_json)
 
-session.close()
+    # opens a unix socket session and adds the hook defined above
+    session = requests_unixsocket.Session()
+    session.hooks["response"].append(hook)
+    session_logger = logging.getLogger("zebr0-lxd.Session")
+
+    argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
+    argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
+    args = argparser.parse_args(args)
+
+    zebr0_service = zebr0.Client(args.url, args.levels, args.cache, args.configuration_file)
+
+    # loads the configuration from zebr0 (uses the yaml baseloader to preserve all strings)
+    config = yaml.load(zebr0_service.get("lxd-stack"), Loader=yaml.BaseLoader)
+
+    # calls the method given as parameter
+    globals()[args.command](session, config)
+
+    session.close()
+
+
+if __name__ == '__main__':
+    main()
