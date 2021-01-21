@@ -18,6 +18,7 @@ def clean_before_after():
         subprocess.Popen("lxc storage delete test-storage-pool", shell=True).wait()
         subprocess.Popen("lxc network delete test-network", shell=True).wait()
         subprocess.Popen("lxc profile delete test-profile", shell=True).wait()
+        subprocess.Popen("lxc stop test-instance", shell=True).wait()
         subprocess.Popen("lxc delete test-instance", shell=True).wait()
 
     clean()
@@ -100,31 +101,21 @@ def test_delete_instance(client):
 
 
 def test_is_running(client):
-    subprocess.Popen("lxc launch ubuntu:focal test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert client.is_running("test")
-    subprocess.Popen("lxc stop test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert not client.is_running("test")
-    client.delete(Collection.INSTANCES, "test")
+    client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}})
+    assert not client.is_running("test-instance")
+    subprocess.Popen("lxc start test-instance", shell=True).wait()
+    assert client.is_running("test-instance")
 
 
 def test_start(client):
-    client.create(Collection.INSTANCES, {"name": "test", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/daily", "protocol": "simplestreams", "alias": "bionic"}})
-    assert not client.is_running("test")
-    client.start("test")
-    time.sleep(1)
-    assert client.is_running("test")
-    subprocess.Popen("lxc stop test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert not client.is_running("test")
-    client.delete(Collection.INSTANCES, "test")
+    client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}})
+    client.start("test-instance")
+    assert client.is_running("test-instance")
 
 
 def test_stop(client):
-    subprocess.Popen("lxc launch ubuntu:focal test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert client.is_running("test")
-    client.stop("test")
-    assert not client.is_running("test")
-    client.delete(Collection.INSTANCES, "test")
+    client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}})
+    client.start("test-instance")
+    time.sleep(0.1)
+    client.stop("test-instance")
+    assert not client.is_running("test-instance")
