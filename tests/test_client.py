@@ -49,6 +49,12 @@ def test_exists_container(client):
     assert client.exists(Collection.CONTAINERS, "test-container")
 
 
+def test_create_error(client):
+    with pytest.raises(Exception) as exception:
+        client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool"})
+    assert '{"error":"No driver provided","error_code":400,"type":"error"}' in str(exception.value)
+
+
 def test_create(client):
     client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool", "driver": "dir"})
     assert client.exists(Collection.STORAGE_POOLS, "test-storage-pool")

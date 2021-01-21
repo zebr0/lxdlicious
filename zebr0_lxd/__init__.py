@@ -24,7 +24,8 @@ class Client:
         # this "hook" will be executed after each request
         # see http://docs.python-requests.org/en/master/user/advanced/#event-hooks
         def hook(response, **_):
-            response.raise_for_status()
+            if not response.ok:
+                raise Exception(response.text)
 
             # this will wait for lxd asynchronous operations to be finished
             # see https://github.com/lxc/lxd/blob/master/doc/rest-api.md#background-operation
