@@ -1,11 +1,7 @@
-import subprocess
-import time
-
 import pytest
 import zebr0
 
 import zebr0_lxd
-from zebr0_lxd import Collection
 
 LXD_STACK = """
 ---
@@ -55,64 +51,6 @@ LXD_USER_DATA = """
 def server():
     with zebr0.TestServer() as server:
         yield server
-
-
-def test_exists():
-    client = zebr0_lxd.Client()
-    assert not client.exists(Collection.STORAGE_POOLS, "nominal-storage-pool")
-    subprocess.Popen("lxc storage create nominal-storage-pool dir", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    assert client.exists(Collection.STORAGE_POOLS, "nominal-storage-pool")
-    subprocess.Popen("lxc storage delete nominal-storage-pool", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-
-
-def test_create():
-    client = zebr0_lxd.Client()
-    assert not client.exists(Collection.STORAGE_POOLS, "nominal-storage-pool")
-    client.create(Collection.STORAGE_POOLS, {"name": "nominal-storage-pool", "driver": "dir"})
-    assert client.exists(Collection.STORAGE_POOLS, "nominal-storage-pool")
-    subprocess.Popen("lxc storage delete nominal-storage-pool", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-
-
-def test_delete():
-    client = zebr0_lxd.Client()
-    subprocess.Popen("lxc storage create nominal-storage-pool dir", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    assert client.exists(Collection.STORAGE_POOLS, "nominal-storage-pool")
-    client.delete(Collection.STORAGE_POOLS, "nominal-storage-pool")
-    assert not client.exists(Collection.STORAGE_POOLS, "nominal-storage-pool")
-
-
-def test_is_running():
-    client = zebr0_lxd.Client()
-    subprocess.Popen("lxc launch ubuntu:focal test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert client.is_running("test")
-    subprocess.Popen("lxc stop test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert not client.is_running("test")
-    client.delete(Collection.CONTAINERS, "test")
-
-
-def test_start():
-    client = zebr0_lxd.Client()
-    client.create(Collection.CONTAINERS, {"name": "test", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/daily", "protocol": "simplestreams", "alias": "bionic"}})
-    assert not client.is_running("test")
-    client.start("test")
-    time.sleep(1)
-    assert client.is_running("test")
-    subprocess.Popen("lxc stop test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert not client.is_running("test")
-    client.delete(Collection.CONTAINERS, "test")
-
-
-def test_stop():
-    client = zebr0_lxd.Client()
-    subprocess.Popen("lxc launch ubuntu:focal test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
-    time.sleep(1)
-    assert client.is_running("test")
-    client.stop("test")
-    assert not client.is_running("test")
-    client.delete(Collection.CONTAINERS, "test")
 
 
 def test_ok(server):
