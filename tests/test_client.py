@@ -75,10 +75,28 @@ def test_create_instance(client):
     assert client.exists(Collection.INSTANCES, "test-instance")
 
 
-def test_delete(client):
-    subprocess.Popen("lxc storage create test-storage-pool dir", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
+def test_delete_storage_pool(client):
+    client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool", "driver": "dir"})
     client.delete(Collection.STORAGE_POOLS, "test-storage-pool")
     assert not client.exists(Collection.STORAGE_POOLS, "test-storage-pool")
+
+
+def test_delete_network(client):
+    client.create(Collection.NETWORKS, {"name": "test-network"})
+    client.delete(Collection.NETWORKS, "test-network")
+    assert not client.exists(Collection.NETWORKS, "test-network")
+
+
+def test_delete_profile(client):
+    client.create(Collection.PROFILES, {"name": "test-profile"})
+    client.delete(Collection.PROFILES, "test-profile")
+    assert not client.exists(Collection.PROFILES, "test-profile")
+
+
+def test_delete_instance(client):
+    client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "none"}})
+    client.delete(Collection.INSTANCES, "test-instance")
+    assert not client.exists(Collection.INSTANCES, "test-instance")
 
 
 def test_is_running(client):
