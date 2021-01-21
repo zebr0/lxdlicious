@@ -55,9 +55,24 @@ def test_create_error(client):
     assert '{"error":"No driver provided","error_code":400,"type":"error"}' in str(exception.value)
 
 
-def test_create(client):
+def test_create_storage_pool(client):
     client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool", "driver": "dir"})
     assert client.exists(Collection.STORAGE_POOLS, "test-storage-pool")
+
+
+def test_create_network(client):
+    client.create(Collection.NETWORKS, {"name": "test-network"})
+    assert client.exists(Collection.NETWORKS, "test-network")
+
+
+def test_create_profile(client):
+    client.create(Collection.PROFILES, {"name": "test-profile"})
+    assert client.exists(Collection.PROFILES, "test-profile")
+
+
+def test_create_container(client):
+    client.create(Collection.CONTAINERS, {"name": "test-container", "source": {"type": "none"}})
+    assert client.exists(Collection.CONTAINERS, "test-container")
 
 
 def test_delete(client):
