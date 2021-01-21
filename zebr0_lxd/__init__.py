@@ -107,6 +107,8 @@ def delete(url: str, levels: Optional[List[str]], cache: int, configuration_file
 def main(args: Optional[List[str]] = None) -> None:
     argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
     argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
+    argparser.add_argument("key", nargs="?", default="lxd-stack", help="the stack's key, defaults to 'lxd-stack'")
+    argparser.add_argument("--lxd-url", default=URL_DEFAULT, help="")
     args = argparser.parse_args(args)
 
-    globals()[args.command](args.url, args.levels, args.cache, args.configuration_file)
+    globals()[args.command](args.url, args.levels, args.cache, args.configuration_file, args.key, args.lxd_url)
