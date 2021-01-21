@@ -14,7 +14,7 @@ class Collection(str, enum.Enum):
     STORAGE_POOLS = "/1.0/storage-pools",
     NETWORKS = "/1.0/networks",
     PROFILES = "/1.0/profiles",
-    CONTAINERS = "/1.0/containers"
+    INSTANCES = "/1.0/instances"
 
 
 class Client:
@@ -49,16 +49,16 @@ class Client:
         if self.exists(collection, resource_name):
             self.session.delete(self.url + collection + "/" + resource_name)
 
-    def is_running(self, container_name):
-        return self.session.get(self.url + Collection.CONTAINERS + "/" + container_name).json().get("metadata").get("status") == "Running"
+    def is_running(self, instance_name):
+        return self.session.get(self.url + Collection.INSTANCES + "/" + instance_name).json().get("metadata").get("status") == "Running"
 
-    def start(self, container_name):
-        if not self.is_running(container_name):
-            self.session.put(self.url + Collection.CONTAINERS + "/" + container_name + "/state", json={"action": "start"})
+    def start(self, instance_name):
+        if not self.is_running(instance_name):
+            self.session.put(self.url + Collection.INSTANCES + "/" + instance_name + "/state", json={"action": "start"})
 
-    def stop(self, container_name):
-        if self.is_running(container_name):
-            self.session.put(self.url + Collection.CONTAINERS + "/" + container_name + "/state", json={"action": "stop"})
+    def stop(self, instance_name):
+        if self.is_running(instance_name):
+            self.session.put(self.url + Collection.INSTANCES + "/" + instance_name + "/state", json={"action": "stop"})
 
 
 def create(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
@@ -71,15 +71,15 @@ def create(url: str, levels: Optional[List[str]], cache: int, configuration_file
         client.create(Collection.NETWORKS, resource)
     for resource in stack.get("profiles") or []:
         client.create(Collection.PROFILES, resource)
-    for resource in stack.get("containers") or []:
-        client.create(Collection.CONTAINERS, resource)
+    for resource in stack.get("instances") or []:
+        client.create(Collection.INSTANCES, resource)
 
 
 def start(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
     stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
     client = Client(lxd_url)
 
-    for resource in stack.get("containers") or []:
+    for resource in stack.get("instances") or []:
         client.start(resource.get("name"))
 
 
@@ -87,7 +87,7 @@ def stop(url: str, levels: Optional[List[str]], cache: int, configuration_file: 
     stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
     client = Client(lxd_url)
 
-    for resource in stack.get("containers") or []:
+    for resource in stack.get("instances") or []:
         client.stop(resource.get("name"))
 
 
@@ -95,8 +95,8 @@ def delete(url: str, levels: Optional[List[str]], cache: int, configuration_file
     stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
     client = Client(lxd_url)
 
-    for resource in stack.get("containers") or []:
-        client.delete(Collection.CONTAINERS, resource.get("name"))
+    for resource in stack.get("instances") or []:
+        client.delete(Collection.INSTANCES, resource.get("name"))
     for resource in stack.get("profiles") or []:
         client.delete(Collection.PROFILES, resource.get("name"))
     for resource in stack.get("networks") or []:

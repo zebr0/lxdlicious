@@ -18,7 +18,7 @@ def clean_before_after():
         subprocess.Popen("lxc storage delete test-storage-pool", shell=True).wait()
         subprocess.Popen("lxc network delete test-network", shell=True).wait()
         subprocess.Popen("lxc profile delete test-profile", shell=True).wait()
-        subprocess.Popen("lxc delete test-container", shell=True).wait()
+        subprocess.Popen("lxc delete test-instance", shell=True).wait()
 
     clean()
     yield  # see https://stackoverflow.com/questions/22627659/run-code-before-and-after-each-test-in-py-test
@@ -43,10 +43,10 @@ def test_exists_profile(client):
     assert client.exists(Collection.PROFILES, "test-profile")
 
 
-def test_exists_container(client):
-    assert not client.exists(Collection.CONTAINERS, "test-container")
-    subprocess.Popen("lxc launch test-container --empty", shell=True).wait()
-    assert client.exists(Collection.CONTAINERS, "test-container")
+def test_exists_instance(client):
+    assert not client.exists(Collection.INSTANCES, "test-instance")
+    subprocess.Popen("lxc launch test-instance --empty", shell=True).wait()
+    assert client.exists(Collection.INSTANCES, "test-instance")
 
 
 def test_create_error(client):
@@ -70,9 +70,9 @@ def test_create_profile(client):
     assert client.exists(Collection.PROFILES, "test-profile")
 
 
-def test_create_container(client):
-    client.create(Collection.CONTAINERS, {"name": "test-container", "source": {"type": "none"}})
-    assert client.exists(Collection.CONTAINERS, "test-container")
+def test_create_instance(client):
+    client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "none"}})
+    assert client.exists(Collection.INSTANCES, "test-instance")
 
 
 def test_delete(client):
@@ -88,11 +88,11 @@ def test_is_running(client):
     subprocess.Popen("lxc stop test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
     time.sleep(1)
     assert not client.is_running("test")
-    client.delete(Collection.CONTAINERS, "test")
+    client.delete(Collection.INSTANCES, "test")
 
 
 def test_start(client):
-    client.create(Collection.CONTAINERS, {"name": "test", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/daily", "protocol": "simplestreams", "alias": "bionic"}})
+    client.create(Collection.INSTANCES, {"name": "test", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/daily", "protocol": "simplestreams", "alias": "bionic"}})
     assert not client.is_running("test")
     client.start("test")
     time.sleep(1)
@@ -100,7 +100,7 @@ def test_start(client):
     subprocess.Popen("lxc stop test", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).wait()
     time.sleep(1)
     assert not client.is_running("test")
-    client.delete(Collection.CONTAINERS, "test")
+    client.delete(Collection.INSTANCES, "test")
 
 
 def test_stop(client):
@@ -109,4 +109,4 @@ def test_stop(client):
     assert client.is_running("test")
     client.stop("test")
     assert not client.is_running("test")
-    client.delete(Collection.CONTAINERS, "test")
+    client.delete(Collection.INSTANCES, "test")

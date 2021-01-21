@@ -30,7 +30,7 @@ profiles:
       nictype: bridged
       parent: nominalnetwork0
 
-containers:
+instances:
 - name: dummy-container
   profiles:
   - nominal-profile
