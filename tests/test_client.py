@@ -59,45 +59,53 @@ def test_create_error(client):
 def test_create_storage_pool(client):
     client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool", "driver": "dir"})
     assert client.exists(Collection.STORAGE_POOLS, "test-storage-pool")
+    client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool", "driver": "dir"})
 
 
 def test_create_network(client):
     client.create(Collection.NETWORKS, {"name": "test-network"})
     assert client.exists(Collection.NETWORKS, "test-network")
+    client.create(Collection.NETWORKS, {"name": "test-network"})
 
 
 def test_create_profile(client):
     client.create(Collection.PROFILES, {"name": "test-profile"})
     assert client.exists(Collection.PROFILES, "test-profile")
+    client.create(Collection.PROFILES, {"name": "test-profile"})
 
 
 def test_create_instance(client):
     client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "none"}})
     assert client.exists(Collection.INSTANCES, "test-instance")
+    client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "none"}})
 
 
 def test_delete_storage_pool(client):
     client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool", "driver": "dir"})
     client.delete(Collection.STORAGE_POOLS, "test-storage-pool")
     assert not client.exists(Collection.STORAGE_POOLS, "test-storage-pool")
+    client.delete(Collection.STORAGE_POOLS, "test-storage-pool")
 
 
 def test_delete_network(client):
     client.create(Collection.NETWORKS, {"name": "test-network"})
     client.delete(Collection.NETWORKS, "test-network")
     assert not client.exists(Collection.NETWORKS, "test-network")
+    client.delete(Collection.NETWORKS, "test-network")
 
 
 def test_delete_profile(client):
     client.create(Collection.PROFILES, {"name": "test-profile"})
     client.delete(Collection.PROFILES, "test-profile")
     assert not client.exists(Collection.PROFILES, "test-profile")
+    client.delete(Collection.PROFILES, "test-profile")
 
 
 def test_delete_instance(client):
     client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "none"}})
     client.delete(Collection.INSTANCES, "test-instance")
     assert not client.exists(Collection.INSTANCES, "test-instance")
+    client.delete(Collection.INSTANCES, "test-instance")
 
 
 def test_is_running(client):
@@ -111,6 +119,7 @@ def test_start(client):
     client.create(Collection.INSTANCES, {"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}})
     client.start("test-instance")
     assert client.is_running("test-instance")
+    client.start("test-instance")
 
 
 def test_stop(client):
@@ -119,3 +128,4 @@ def test_stop(client):
     time.sleep(0.1)
     client.stop("test-instance")
     assert not client.is_running("test-instance")
+    client.stop("test-instance")
