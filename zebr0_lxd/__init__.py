@@ -1,4 +1,5 @@
 import enum
+import json
 from pathlib import Path
 from typing import Optional, List
 
@@ -36,6 +37,7 @@ class Client:
         self.session.hooks["response"].append(hook)
 
     def exists(self, collection, resource_name):
+        print(f"checking {collection}/{resource_name}")
         return any(filter(
             lambda a: a == collection + "/" + resource_name,
             self.session.get(self.url + collection).json().get("metadata")
@@ -43,21 +45,26 @@ class Client:
 
     def create(self, collection, resource):
         if not self.exists(collection, resource.get("name")):
+            print(f"creating {collection}/{json.dumps(resource)}")
             self.session.post(self.url + collection, json=resource)
 
     def delete(self, collection, resource_name):
         if self.exists(collection, resource_name):
+            print(f"deleting {collection}/{resource_name}")
             self.session.delete(self.url + collection + "/" + resource_name)
 
     def is_running(self, instance_name):
+        print(f"checking status {Collection.INSTANCES}/{instance_name}")
         return self.session.get(self.url + Collection.INSTANCES + "/" + instance_name).json().get("metadata").get("status") == "Running"
 
     def start(self, instance_name):
         if not self.is_running(instance_name):
+            print(f"starting {Collection.INSTANCES}/{instance_name}")
             self.session.put(self.url + Collection.INSTANCES + "/" + instance_name + "/state", json={"action": "start"})
 
     def stop(self, instance_name):
         if self.is_running(instance_name):
+            print(f"stopping {Collection.INSTANCES}/{instance_name}")
             self.session.put(self.url + Collection.INSTANCES + "/" + instance_name + "/state", json={"action": "stop"})
 
 
