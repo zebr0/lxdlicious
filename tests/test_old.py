@@ -5,7 +5,7 @@ import zebr0_lxd
 
 LXD_STACK = """
 ---
-storage_pools:
+storage-pools:
 - name: nominal-storage-pool
   driver: dir
 

@@ -21,6 +21,13 @@ class Collection(str, enum.Enum):
         return "/1.0/" + self
 
 
+class Command(str, enum.Enum):
+    CREATE = "create",
+    START = "start",
+    STOP = "stop",
+    DELETE = "delete"
+
+
 class Client:
     def __init__(self, url: str = URL_DEFAULT):
         self.url = url
@@ -71,55 +78,31 @@ class Client:
             self.session.put(self.url + Collection.INSTANCES.path() + "/" + instance_name + "/state", json={"action": "stop"})
 
 
-def create(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
+def do(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, command: Command, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
     stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
     client = Client(lxd_url)
 
-    for resource in stack.get("storage_pools") or []:
-        client.create(Collection.STORAGE_POOLS, resource)
-    for resource in stack.get("networks") or []:
-        client.create(Collection.NETWORKS, resource)
-    for resource in stack.get("profiles") or []:
-        client.create(Collection.PROFILES, resource)
-    for resource in stack.get("instances") or []:
-        client.create(Collection.INSTANCES, resource)
-
-
-def start(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
-    stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
-    client = Client(lxd_url)
-
-    for resource in stack.get("instances") or []:
-        client.start(resource.get("name"))
-
-
-def stop(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
-    stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
-    client = Client(lxd_url)
-
-    for resource in stack.get("instances") or []:
-        client.stop(resource.get("name"))
-
-
-def delete(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
-    stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
-    client = Client(lxd_url)
-
-    for resource in stack.get("instances") or []:
-        client.delete(Collection.INSTANCES, resource.get("name"))
-    for resource in stack.get("profiles") or []:
-        client.delete(Collection.PROFILES, resource.get("name"))
-    for resource in stack.get("networks") or []:
-        client.delete(Collection.NETWORKS, resource.get("name"))
-    for resource in stack.get("storage_pools") or []:
-        client.delete(Collection.STORAGE_POOLS, resource.get("name"))
+    if command == Command.CREATE:
+        for collection in list(Collection):
+            for resource in stack.get(collection) or []:
+                client.create(collection, resource)
+    elif command == Command.START:
+        for resource in stack.get(Collection.INSTANCES) or []:
+            client.start(resource.get("name"))
+    elif command == Command.STOP:
+        for resource in stack.get(Collection.INSTANCES) or []:
+            client.stop(resource.get("name"))
+    elif command == Command.DELETE:
+        for collection in reversed(Collection):
+            for resource in stack.get(collection) or []:
+                client.delete(collection, resource.get("name"))
 
 
 def main(args: Optional[List[str]] = None) -> None:
     argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
-    argparser.add_argument("command", choices=["create", "start", "stop", "delete"])
+    argparser.add_argument("command", choices=list(Command))
     argparser.add_argument("key", nargs="?", default="lxd-stack", help="the stack's key, defaults to 'lxd-stack'")
     argparser.add_argument("--lxd-url", default=URL_DEFAULT, help="")
     args = argparser.parse_args(args)
 
-    globals()[args.command](args.url, args.levels, args.cache, args.configuration_file, args.key, args.lxd_url)
+    do(args.url, args.levels, args.cache, args.configuration_file, args.command, args.key, args.lxd_url)
