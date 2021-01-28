@@ -27,8 +27,8 @@ def clean_before_after():
 
 
 EXISTS_STORAGE_POOL = """
-checking /1.0/storage-pools/test-storage-pool
-checking /1.0/storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
 """.lstrip()
 
 
@@ -40,8 +40,8 @@ def test_exists_storage_pool(client, capsys):
 
 
 EXISTS_NETWORK = """
-checking /1.0/networks/test-network
-checking /1.0/networks/test-network
+checking networks/test-network
+checking networks/test-network
 """.lstrip()
 
 
@@ -53,8 +53,8 @@ def test_exists_network(client, capsys):
 
 
 EXISTS_PROFILE = """
-checking /1.0/profiles/test-profile
-checking /1.0/profiles/test-profile
+checking profiles/test-profile
+checking profiles/test-profile
 """.lstrip()
 
 
@@ -66,8 +66,8 @@ def test_exists_profile(client, capsys):
 
 
 EXISTS_INSTANCE = """
-checking /1.0/instances/test-instance
-checking /1.0/instances/test-instance
+checking instances/test-instance
+checking instances/test-instance
 """.lstrip()
 
 
@@ -85,10 +85,10 @@ def test_create_error(client):
 
 
 CREATE_STORAGE_POOL = """
-checking /1.0/storage-pools/test-storage-pool
-creating /1.0/storage-pools/{"name": "test-storage-pool", "driver": "dir"}
-checking /1.0/storage-pools/test-storage-pool
-checking /1.0/storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
+creating storage-pools/{"name": "test-storage-pool", "driver": "dir"}
+checking storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
 """.lstrip()
 
 
@@ -100,10 +100,10 @@ def test_create_storage_pool(client, capsys):
 
 
 CREATE_NETWORK = """
-checking /1.0/networks/test-network
-creating /1.0/networks/{"name": "test-network"}
-checking /1.0/networks/test-network
-checking /1.0/networks/test-network
+checking networks/test-network
+creating networks/{"name": "test-network"}
+checking networks/test-network
+checking networks/test-network
 """.lstrip()
 
 
@@ -115,10 +115,10 @@ def test_create_network(client, capsys):
 
 
 CREATE_PROFILE = """
-checking /1.0/profiles/test-profile
-creating /1.0/profiles/{"name": "test-profile"}
-checking /1.0/profiles/test-profile
-checking /1.0/profiles/test-profile
+checking profiles/test-profile
+creating profiles/{"name": "test-profile"}
+checking profiles/test-profile
+checking profiles/test-profile
 """.lstrip()
 
 
@@ -130,10 +130,10 @@ def test_create_profile(client, capsys):
 
 
 CREATE_INSTANCE = """
-checking /1.0/instances/test-instance
-creating /1.0/instances/{"name": "test-instance", "source": {"type": "none"}}
-checking /1.0/instances/test-instance
-checking /1.0/instances/test-instance
+checking instances/test-instance
+creating instances/{"name": "test-instance", "source": {"type": "none"}}
+checking instances/test-instance
+checking instances/test-instance
 """.lstrip()
 
 
@@ -145,12 +145,12 @@ def test_create_instance(client, capsys):
 
 
 DELETE_STORAGE_POOL = """
-checking /1.0/storage-pools/test-storage-pool
-creating /1.0/storage-pools/{"name": "test-storage-pool", "driver": "dir"}
-checking /1.0/storage-pools/test-storage-pool
-deleting /1.0/storage-pools/test-storage-pool
-checking /1.0/storage-pools/test-storage-pool
-checking /1.0/storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
+creating storage-pools/{"name": "test-storage-pool", "driver": "dir"}
+checking storage-pools/test-storage-pool
+deleting storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
+checking storage-pools/test-storage-pool
 """.lstrip()
 
 
@@ -163,12 +163,12 @@ def test_delete_storage_pool(client, capsys):
 
 
 DELETE_NETWORK = """
-checking /1.0/networks/test-network
-creating /1.0/networks/{"name": "test-network"}
-checking /1.0/networks/test-network
-deleting /1.0/networks/test-network
-checking /1.0/networks/test-network
-checking /1.0/networks/test-network
+checking networks/test-network
+creating networks/{"name": "test-network"}
+checking networks/test-network
+deleting networks/test-network
+checking networks/test-network
+checking networks/test-network
 """.lstrip()
 
 
@@ -181,12 +181,12 @@ def test_delete_network(client, capsys):
 
 
 DELETE_PROFILE = """
-checking /1.0/profiles/test-profile
-creating /1.0/profiles/{"name": "test-profile"}
-checking /1.0/profiles/test-profile
-deleting /1.0/profiles/test-profile
-checking /1.0/profiles/test-profile
-checking /1.0/profiles/test-profile
+checking profiles/test-profile
+creating profiles/{"name": "test-profile"}
+checking profiles/test-profile
+deleting profiles/test-profile
+checking profiles/test-profile
+checking profiles/test-profile
 """.lstrip()
 
 
@@ -199,12 +199,12 @@ def test_delete_profile(client, capsys):
 
 
 DELETE_INSTANCE = """
-checking /1.0/instances/test-instance
-creating /1.0/instances/{"name": "test-instance", "source": {"type": "none"}}
-checking /1.0/instances/test-instance
-deleting /1.0/instances/test-instance
-checking /1.0/instances/test-instance
-checking /1.0/instances/test-instance
+checking instances/test-instance
+creating instances/{"name": "test-instance", "source": {"type": "none"}}
+checking instances/test-instance
+deleting instances/test-instance
+checking instances/test-instance
+checking instances/test-instance
 """.lstrip()
 
 
@@ -217,10 +217,10 @@ def test_delete_instance(client, capsys):
 
 
 IS_RUNNING = """
-checking /1.0/instances/test-instance
-creating /1.0/instances/{"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
-checking status /1.0/instances/test-instance
-checking status /1.0/instances/test-instance
+checking instances/test-instance
+creating instances/{"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
+checking instances/test-instance
+checking instances/test-instance
 """.lstrip()
 
 
@@ -233,12 +233,12 @@ def test_is_running(client, capsys):
 
 
 START = """
-checking /1.0/instances/test-instance
-creating /1.0/instances/{"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
-checking status /1.0/instances/test-instance
-starting /1.0/instances/test-instance
-checking status /1.0/instances/test-instance
-checking status /1.0/instances/test-instance
+checking instances/test-instance
+creating instances/{"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
+checking instances/test-instance
+starting instances/test-instance
+checking instances/test-instance
+checking instances/test-instance
 """.lstrip()
 
 
@@ -251,14 +251,14 @@ def test_start(client, capsys):
 
 
 STOP = """
-checking /1.0/instances/test-instance
-creating /1.0/instances/{"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
-checking status /1.0/instances/test-instance
-starting /1.0/instances/test-instance
-checking status /1.0/instances/test-instance
-stopping /1.0/instances/test-instance
-checking status /1.0/instances/test-instance
-checking status /1.0/instances/test-instance
+checking instances/test-instance
+creating instances/{"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
+checking instances/test-instance
+starting instances/test-instance
+checking instances/test-instance
+stopping instances/test-instance
+checking instances/test-instance
+checking instances/test-instance
 """.lstrip()
 
 

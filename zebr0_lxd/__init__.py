@@ -12,10 +12,13 @@ URL_DEFAULT = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 
 class Collection(str, enum.Enum):
-    STORAGE_POOLS = "/1.0/storage-pools",
-    NETWORKS = "/1.0/networks",
-    PROFILES = "/1.0/profiles",
-    INSTANCES = "/1.0/instances"
+    STORAGE_POOLS = "storage-pools",
+    NETWORKS = "networks",
+    PROFILES = "profiles",
+    INSTANCES = "instances"
+
+    def path(self):
+        return "/1.0/" + self
 
 
 class Client:
@@ -39,33 +42,33 @@ class Client:
     def exists(self, collection, resource_name):
         print(f"checking {collection}/{resource_name}")
         return any(filter(
-            lambda a: a == collection + "/" + resource_name,
-            self.session.get(self.url + collection).json().get("metadata")
+            lambda a: a == collection.path() + "/" + resource_name,
+            self.session.get(self.url + collection.path()).json().get("metadata")
         ))
 
     def create(self, collection, resource):
         if not self.exists(collection, resource.get("name")):
             print(f"creating {collection}/{json.dumps(resource)}")
-            self.session.post(self.url + collection, json=resource)
+            self.session.post(self.url + collection.path(), json=resource)
 
     def delete(self, collection, resource_name):
         if self.exists(collection, resource_name):
             print(f"deleting {collection}/{resource_name}")
-            self.session.delete(self.url + collection + "/" + resource_name)
+            self.session.delete(self.url + collection.path() + "/" + resource_name)
 
     def is_running(self, instance_name):
-        print(f"checking status {Collection.INSTANCES}/{instance_name}")
-        return self.session.get(self.url + Collection.INSTANCES + "/" + instance_name).json().get("metadata").get("status") == "Running"
+        print(f"checking {Collection.INSTANCES}/{instance_name}")
+        return self.session.get(self.url + Collection.INSTANCES.path() + "/" + instance_name).json().get("metadata").get("status") == "Running"
 
     def start(self, instance_name):
         if not self.is_running(instance_name):
             print(f"starting {Collection.INSTANCES}/{instance_name}")
-            self.session.put(self.url + Collection.INSTANCES + "/" + instance_name + "/state", json={"action": "start"})
+            self.session.put(self.url + Collection.INSTANCES.path() + "/" + instance_name + "/state", json={"action": "start"})
 
     def stop(self, instance_name):
         if self.is_running(instance_name):
             print(f"stopping {Collection.INSTANCES}/{instance_name}")
-            self.session.put(self.url + Collection.INSTANCES + "/" + instance_name + "/state", json={"action": "stop"})
+            self.session.put(self.url + Collection.INSTANCES.path() + "/" + instance_name + "/state", json={"action": "stop"})
 
 
 def create(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
