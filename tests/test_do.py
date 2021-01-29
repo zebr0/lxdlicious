@@ -12,6 +12,24 @@ def server():
         yield server
 
 
+def test_ko_key_not_found(server, capsys):
+    server.data = {}
+
+    with pytest.raises(SystemExit) as e:
+        zebr0_lxd.do("http://localhost:8000", [], 1, Path(""), zebr0_lxd.Command.CREATE)
+    assert e.value.code == 1
+    assert capsys.readouterr().out == "key 'lxd-stack' not found on server http://localhost:8000\n"
+
+
+def test_ko_not_a_stack(server, capsys):
+    server.data = {"lxd-stack": "not a stack"}
+
+    with pytest.raises(SystemExit) as e:
+        zebr0_lxd.do("http://localhost:8000", [], 1, Path(""), zebr0_lxd.Command.CREATE)
+    assert e.value.code == 1
+    assert capsys.readouterr().out == "key 'lxd-stack' on server http://localhost:8000 is not a proper yaml or json dictionary\n"
+
+
 LXD_STACK = """
 ---
 storage-pools:

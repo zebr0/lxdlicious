@@ -79,7 +79,16 @@ class Client:
 
 
 def do(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, command: Command, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
-    stack = yaml.load(zebr0.Client(url, levels, cache, configuration_file).get(key), Loader=yaml.BaseLoader)
+    value = zebr0.Client(url, levels, cache, configuration_file).get(key)
+    if not value:
+        print(f"key '{key}' not found on server {url}")
+        exit(1)
+
+    stack = yaml.load(value, Loader=yaml.BaseLoader)
+    if not isinstance(stack, dict):
+        print(f"key '{key}' on server {url} is not a proper yaml or json dictionary")
+        exit(1)
+
     client = Client(lxd_url)
 
     if command == Command.CREATE:
