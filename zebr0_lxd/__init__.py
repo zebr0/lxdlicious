@@ -18,7 +18,7 @@ class Command(str, enum.Enum):
     DELETE = "delete"
 
 
-class Collection(str, enum.Enum):
+class Resource(str, enum.Enum):
     STORAGE_POOLS = "storage-pools",
     NETWORKS = "networks",
     PROFILES = "profiles",
@@ -46,36 +46,36 @@ class Client:
         self.session = requests_unixsocket.Session()
         self.session.hooks["response"].append(hook)
 
-    def exists(self, collection, resource_name):
-        print(f"checking {collection}/{resource_name}")
+    def exists(self, resource, name):
+        print(f"checking {resource}/{name}")
         return any(filter(
-            lambda a: a == collection.path() + "/" + resource_name,
-            self.session.get(self.url + collection.path()).json().get("metadata")
+            lambda a: a == resource.path() + "/" + name,
+            self.session.get(self.url + resource.path()).json().get("metadata")
         ))
 
-    def create(self, collection, resource):
-        if not self.exists(collection, resource.get("name")):
-            print(f"creating {collection}/{json.dumps(resource)}")
-            self.session.post(self.url + collection.path(), json=resource)
+    def create(self, resource, config):
+        if not self.exists(resource, config.get("name")):
+            print(f"creating {resource}/{json.dumps(config)}")
+            self.session.post(self.url + resource.path(), json=config)
 
-    def delete(self, collection, resource_name):
-        if self.exists(collection, resource_name):
-            print(f"deleting {collection}/{resource_name}")
-            self.session.delete(self.url + collection.path() + "/" + resource_name)
+    def delete(self, resource, name):
+        if self.exists(resource, name):
+            print(f"deleting {resource}/{name}")
+            self.session.delete(self.url + resource.path() + "/" + name)
 
-    def is_running(self, instance_name):
-        print(f"checking {Collection.INSTANCES}/{instance_name}")
-        return self.session.get(self.url + Collection.INSTANCES.path() + "/" + instance_name).json().get("metadata").get("status") == "Running"
+    def is_running(self, name):
+        print(f"checking {Resource.INSTANCES}/{name}")
+        return self.session.get(self.url + Resource.INSTANCES.path() + "/" + name).json().get("metadata").get("status") == "Running"
 
-    def start(self, instance_name):
-        if not self.is_running(instance_name):
-            print(f"starting {Collection.INSTANCES}/{instance_name}")
-            self.session.put(self.url + Collection.INSTANCES.path() + "/" + instance_name + "/state", json={"action": "start"})
+    def start(self, name):
+        if not self.is_running(name):
+            print(f"starting {Resource.INSTANCES}/{name}")
+            self.session.put(self.url + Resource.INSTANCES.path() + "/" + name + "/state", json={"action": "start"})
 
-    def stop(self, instance_name):
-        if self.is_running(instance_name):
-            print(f"stopping {Collection.INSTANCES}/{instance_name}")
-            self.session.put(self.url + Collection.INSTANCES.path() + "/" + instance_name + "/state", json={"action": "stop"})
+    def stop(self, name):
+        if self.is_running(name):
+            print(f"stopping {Resource.INSTANCES}/{name}")
+            self.session.put(self.url + Resource.INSTANCES.path() + "/" + name + "/state", json={"action": "stop"})
 
 
 def do(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, command: Command, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
@@ -92,19 +92,19 @@ def do(url: str, levels: Optional[List[str]], cache: int, configuration_file: Pa
     client = Client(lxd_url)
 
     if command == Command.CREATE:
-        for collection in list(Collection):
-            for resource in stack.get(collection) or []:
-                client.create(collection, resource)
+        for resource in list(Resource):
+            for config in stack.get(resource) or []:
+                client.create(resource, config)
     elif command == Command.START:
-        for resource in stack.get(Collection.INSTANCES) or []:
-            client.start(resource.get("name"))
+        for config in stack.get(Resource.INSTANCES) or []:
+            client.start(config.get("name"))
     elif command == Command.STOP:
-        for resource in stack.get(Collection.INSTANCES) or []:
-            client.stop(resource.get("name"))
+        for config in stack.get(Resource.INSTANCES) or []:
+            client.stop(config.get("name"))
     elif command == Command.DELETE:
-        for collection in reversed(Collection):
-            for resource in stack.get(collection) or []:
-                client.delete(collection, resource.get("name"))
+        for resource in reversed(Resource):
+            for config in stack.get(resource) or []:
+                client.delete(resource, config.get("name"))
 
 
 def main(args: Optional[List[str]] = None) -> None:

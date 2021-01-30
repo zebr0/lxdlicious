@@ -17,17 +17,17 @@ def server():
 def mock_client(monkeypatch):
     log = []
 
-    def mock_create(_, collection, resource):
-        log.append((Command.CREATE, collection, resource))
+    def mock_create(_, resource, config):
+        log.append((Command.CREATE, resource, config))
 
-    def mock_start(_, instance_name):
-        log.append((Command.START, instance_name))
+    def mock_start(_, name):
+        log.append((Command.START, name))
 
-    def mock_stop(_, instance_name):
-        log.append((Command.STOP, instance_name))
+    def mock_stop(_, name):
+        log.append((Command.STOP, name))
 
-    def mock_delete(_, collection, resource_name):
-        log.append((Command.DELETE, collection, resource_name))
+    def mock_delete(_, resource, name):
+        log.append((Command.DELETE, resource, name))
 
     monkeypatch.setattr(zebr0_lxd.Client, Command.CREATE, mock_create)
     monkeypatch.setattr(zebr0_lxd.Client, Command.START, mock_start)
