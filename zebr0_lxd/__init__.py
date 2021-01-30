@@ -11,6 +11,13 @@ KEY_DEFAULT = "lxd-stack"
 URL_DEFAULT = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
 
 
+class Command(str, enum.Enum):
+    CREATE = "create",
+    START = "start",
+    STOP = "stop",
+    DELETE = "delete"
+
+
 class Collection(str, enum.Enum):
     STORAGE_POOLS = "storage-pools",
     NETWORKS = "networks",
@@ -19,13 +26,6 @@ class Collection(str, enum.Enum):
 
     def path(self):
         return "/1.0/" + self
-
-
-class Command(str, enum.Enum):
-    CREATE = "create",
-    START = "start",
-    STOP = "stop",
-    DELETE = "delete"
 
 
 class Client:

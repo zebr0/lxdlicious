@@ -78,12 +78,6 @@ def test_exists_instance(client, capsys):
     assert capsys.readouterr().out == EXISTS_INSTANCE
 
 
-def test_create_error(client):
-    with pytest.raises(Exception) as exception:
-        client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool"})
-    assert '{"error":"No driver provided","error_code":400,"type":"error"}' in str(exception.value)
-
-
 CREATE_STORAGE_POOL = """
 checking storage-pools/test-storage-pool
 creating storage-pools/{"name": "test-storage-pool", "driver": "dir"}
@@ -272,3 +266,9 @@ def test_stop(client, capsys):
     assert not client.is_running("test-instance")
     client.stop("test-instance")
     assert capsys.readouterr().out == STOP
+
+
+def test_create_error(client):
+    with pytest.raises(Exception) as exception:
+        client.create(Collection.STORAGE_POOLS, {"name": "test-storage-pool"})
+    assert '{"error":"No driver provided","error_code":400,"type":"error"}' in str(exception.value)
