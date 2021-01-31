@@ -112,3 +112,21 @@ def test_ok(server, capsys):
 
     zebr0_lxd.main("delete -u http://localhost:8000".split())
     assert capsys.readouterr().out == DELETE
+
+
+def test_ko_key_not_found(server, capsys):
+    server.data = {}
+
+    with pytest.raises(SystemExit) as e:
+        zebr0_lxd.main("create -u http://localhost:8000".split())
+    assert e.value.code == 1
+    assert capsys.readouterr().out == "key 'lxd-stack' not found on server http://localhost:8000\n"
+
+
+def test_ko_not_a_stack(server, capsys):
+    server.data = {"lxd-stack": "not a stack"}
+
+    with pytest.raises(SystemExit) as e:
+        zebr0_lxd.main("create -u http://localhost:8000".split())
+    assert e.value.code == 1
+    assert capsys.readouterr().out == "key 'lxd-stack' on server http://localhost:8000 is not a proper yaml or json dictionary\n"

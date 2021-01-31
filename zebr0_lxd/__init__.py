@@ -1,6 +1,5 @@
 import enum
 import json
-from pathlib import Path
 from typing import Optional, List
 
 import requests_unixsocket
@@ -9,13 +8,6 @@ import zebr0
 
 KEY_DEFAULT = "lxd-stack"
 URL_DEFAULT = "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
-
-
-class Command(str, enum.Enum):
-    CREATE = "create",
-    START = "start",
-    STOP = "stop",
-    DELETE = "delete"
 
 
 class Resource(str, enum.Enum):
@@ -77,41 +69,40 @@ class Client:
             print(f"stopping {Resource.INSTANCES}/{name}")
             self.session.put(self.url + Resource.INSTANCES.path() + "/" + name + "/state", json={"action": "stop"})
 
-
-def do(url: str, levels: Optional[List[str]], cache: int, configuration_file: Path, command: Command, key: str = KEY_DEFAULT, lxd_url: str = URL_DEFAULT):
-    value = zebr0.Client(url, levels, cache, configuration_file).get(key)
-    if not value:
-        print(f"key '{key}' not found on server {url}")
-        exit(1)
-
-    stack = yaml.load(value, Loader=yaml.BaseLoader)
-    if not isinstance(stack, dict):
-        print(f"key '{key}' on server {url} is not a proper yaml or json dictionary")
-        exit(1)
-
-    client = Client(lxd_url)
-
-    if command == Command.CREATE:
+    def create_stack(self, stack):
         for resource in list(Resource):
             for config in stack.get(resource) or []:
-                client.create(resource, config)
-    elif command == Command.START:
-        for config in stack.get(Resource.INSTANCES) or []:
-            client.start(config.get("name"))
-    elif command == Command.STOP:
-        for config in stack.get(Resource.INSTANCES) or []:
-            client.stop(config.get("name"))
-    elif command == Command.DELETE:
+                self.create(resource, config)
+
+    def delete_stack(self, stack):
         for resource in reversed(Resource):
             for config in stack.get(resource) or []:
-                client.delete(resource, config.get("name"))
+                self.delete(resource, config.get("name"))
+
+    def start_stack(self, stack):
+        for config in stack.get(Resource.INSTANCES) or []:
+            self.start(config.get("name"))
+
+    def stop_stack(self, stack):
+        for config in stack.get(Resource.INSTANCES) or []:
+            self.stop(config.get("name"))
 
 
 def main(args: Optional[List[str]] = None) -> None:
     argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
-    argparser.add_argument("command", choices=list(Command))
+    argparser.add_argument("command", choices=["create", "delete", "start", "stop"])
     argparser.add_argument("key", nargs="?", default="lxd-stack", help="the stack's key, defaults to 'lxd-stack'")
     argparser.add_argument("--lxd-url", default=URL_DEFAULT, help="")
     args = argparser.parse_args(args)
 
-    do(args.url, args.levels, args.cache, args.configuration_file, args.command, args.key, args.lxd_url)
+    value = zebr0.Client(args.url, args.levels, args.cache, args.configuration_file).get(args.key)
+    if not value:
+        print(f"key '{args.key}' not found on server {args.url}")
+        exit(1)
+
+    stack = yaml.load(value, Loader=yaml.BaseLoader)
+    if not isinstance(stack, dict):
+        print(f"key '{args.key}' on server {args.url} is not a proper yaml or json dictionary")
+        exit(1)
+
+    getattr(Client(args.lxd_url), args.command + "_stack")(stack)
