@@ -38,52 +38,52 @@ class Client:
         self.session = requests_unixsocket.Session()
         self.session.hooks["response"].append(hook)
 
-    def exists(self, resource, name):
+    def exists(self, resource: Resource, name: str) -> bool:
         print(f"checking {resource}/{name}")
         return any(filter(
             lambda a: a == resource.path() + "/" + name,
             self.session.get(self.url + resource.path()).json().get("metadata")
         ))
 
-    def create(self, resource, config):
+    def create(self, resource: Resource, config: dict) -> None:
         if not self.exists(resource, config.get("name")):
             print(f"creating {resource}/{json.dumps(config)}")
             self.session.post(self.url + resource.path(), json=config)
 
-    def delete(self, resource, name):
+    def delete(self, resource: Resource, name: str) -> None:
         if self.exists(resource, name):
             print(f"deleting {resource}/{name}")
             self.session.delete(self.url + resource.path() + "/" + name)
 
-    def is_running(self, name):
+    def is_running(self, name: str) -> bool:
         print(f"checking {Resource.INSTANCES}/{name}")
         return self.session.get(self.url + Resource.INSTANCES.path() + "/" + name).json().get("metadata").get("status") == "Running"
 
-    def start(self, name):
+    def start(self, name: str) -> None:
         if not self.is_running(name):
             print(f"starting {Resource.INSTANCES}/{name}")
             self.session.put(self.url + Resource.INSTANCES.path() + "/" + name + "/state", json={"action": "start"})
 
-    def stop(self, name):
+    def stop(self, name: str) -> None:
         if self.is_running(name):
             print(f"stopping {Resource.INSTANCES}/{name}")
             self.session.put(self.url + Resource.INSTANCES.path() + "/" + name + "/state", json={"action": "stop"})
 
-    def create_stack(self, stack):
+    def create_stack(self, stack: dict) -> None:
         for resource in list(Resource):
             for config in stack.get(resource) or []:
                 self.create(resource, config)
 
-    def delete_stack(self, stack):
+    def delete_stack(self, stack: dict) -> None:
         for resource in reversed(Resource):
             for config in stack.get(resource) or []:
                 self.delete(resource, config.get("name"))
 
-    def start_stack(self, stack):
+    def start_stack(self, stack: dict) -> None:
         for config in stack.get(Resource.INSTANCES) or []:
             self.start(config.get("name"))
 
-    def stop_stack(self, stack):
+    def stop_stack(self, stack: dict) -> None:
         for config in stack.get(Resource.INSTANCES) or []:
             self.stop(config.get("name"))
 
