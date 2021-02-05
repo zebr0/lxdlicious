@@ -13,7 +13,7 @@ def server():
 
 
 @pytest.fixture(autouse=True)
-def clean_before_after():
+def clean_before_and_after():
     def clean():
         subprocess.Popen("lxc stop test-instance", shell=True).wait()
         subprocess.Popen("lxc delete test-instance", shell=True).wait()
@@ -65,7 +65,7 @@ instances:
     alias: focal
 """.lstrip()
 
-CREATE = """
+OK_OUTPUT1 = """
 checking storage-pools/test-storage-pool
 creating storage-pools/{"name": "test-storage-pool", "driver": "dir"}
 checking networks/test-network
@@ -76,17 +76,17 @@ checking instances/test-instance
 creating instances/{"name": "test-instance", "profiles": ["test-profile"], "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}}
 """.lstrip()
 
-START = """
+OK_OUTPUT2 = """
 checking instances/test-instance
 starting instances/test-instance
 """.lstrip()
 
-STOP = """
+OK_OUTPUT3 = """
 checking instances/test-instance
 stopping instances/test-instance
 """.lstrip()
 
-DELETE = """
+OK_OUTPUT4 = """
 checking instances/test-instance
 deleting instances/test-instance
 checking profiles/test-profile
@@ -102,16 +102,16 @@ def test_ok(server, capsys):
     server.data = {"lxd-stack": LXD_STACK}
 
     zebr0_lxd.main("create -u http://localhost:8000".split())
-    assert capsys.readouterr().out == CREATE
+    assert capsys.readouterr().out == OK_OUTPUT1
 
     zebr0_lxd.main("start -u http://localhost:8000".split())
-    assert capsys.readouterr().out == START
+    assert capsys.readouterr().out == OK_OUTPUT2
 
     zebr0_lxd.main("stop -u http://localhost:8000".split())
-    assert capsys.readouterr().out == STOP
+    assert capsys.readouterr().out == OK_OUTPUT3
 
     zebr0_lxd.main("delete -u http://localhost:8000".split())
-    assert capsys.readouterr().out == DELETE
+    assert capsys.readouterr().out == OK_OUTPUT4
 
 
 def test_ko_key_not_found(server, capsys):

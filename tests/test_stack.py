@@ -10,6 +10,13 @@ def client():
 
 @pytest.fixture
 def mock_client(monkeypatch):
+    """
+    Monkeypatches the client to mock the functions directly interacting with the LXD API.
+    Replaces them by a log system to trace the calls.
+
+    :return: the log list
+    """
+
     log = []
 
     def mock_create(_, resource, config):
