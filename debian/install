@@ -1,1 +1,2 @@
-src/zebr0-lxd /usr/bin
+zebr0_lxd/__init__.py /usr/lib/python3/dist-packages/zebr0_lxd
+zebr0-lxd /usr/bin

@@ -1,3 +1,11 @@
+zebr0-lxd (0.6.0) focal; urgency=medium
+
+  * now uses the reworked version of zebr0
+  * rewritten into a library and a minimalist executable
+  * migrated the tests to pytest
+
+ -- Thomas JOUANNOT (Mazerty) <mazerty@gmail.com>  Fri, 05 Feb 2021 17:45:00 +0100
+
 zebr0-lxd (0.5.0-0ubuntu1) bionic; urgency=medium
 
   * removed the dependency to lxd deb package, so that lxd can be installed with snap
