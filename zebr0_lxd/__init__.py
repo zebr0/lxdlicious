@@ -1,3 +1,4 @@
+import argparse
 import enum
 import json
 from typing import Optional, List
@@ -183,10 +184,34 @@ class Client:
 
 
 def main(args: Optional[List[str]] = None) -> None:
-    argparser = zebr0.build_argument_parser(description="zebr0 client to deploy an application to a local LXD environment")
-    argparser.add_argument("command", choices=["create", "delete", "start", "stop"])
+    """
+    usage: zebr0-lxd [-h] [-u <url>] [-l [<level> [<level> ...]]] [-c <duration>] [-f <path>] [--lxd-url <url>] {create,delete,start,stop} [key]
+
+    LXD provisioning based on zebr0 key-value system.
+    Fetches a stack from the key-value server and manages it on LXD.
+
+    positional arguments:
+      {create,delete,start,stop}
+                            operation to execute on the stack
+      key                   the stack's key, defaults to 'lxd-stack'
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -u <url>, --url <url>
+                            URL of the key-value server, defaults to https://hub.zebr0.io
+      -l [<level> [<level> ...]], --levels [<level> [<level> ...]]
+                            levels of specialization (e.g. "mattermost production" for a <project>/<environment>/<key> structure), defaults to ""
+      -c <duration>, --cache <duration>
+                            in seconds, the duration of the cache of http responses, defaults to 300 seconds
+      -f <path>, --configuration-file <path>
+                            path to the configuration file, defaults to /etc/zebr0.conf for a system-wide configuration
+      --lxd-url <url>       URL of the LXD API (scheme is "http+unix", socket path is percent-encoded into the host field), defaults to "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket"
+    """
+
+    argparser = zebr0.build_argument_parser(description="LXD provisioning based on zebr0 key-value system.\nFetches a stack from the key-value server and manages it on LXD.", formatter_class=argparse.RawDescriptionHelpFormatter)
+    argparser.add_argument("command", choices=["create", "delete", "start", "stop"], help="operation to execute on the stack")
     argparser.add_argument("key", nargs="?", default="lxd-stack", help="the stack's key, defaults to 'lxd-stack'")
-    argparser.add_argument("--lxd-url", default=URL_DEFAULT, help="")
+    argparser.add_argument("--lxd-url", default=URL_DEFAULT, help='URL of the LXD API (scheme is "http+unix", socket path is percent-encoded into the host field), defaults to "http+unix://%%2Fvar%%2Fsnap%%2Flxd%%2Fcommon%%2Flxd%%2Funix.socket"', metavar="<url>")
     args = argparser.parse_args(args)
 
     value = zebr0.Client(args.url, args.levels, args.cache, args.configuration_file).get(args.key)
