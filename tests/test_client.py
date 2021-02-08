@@ -15,11 +15,11 @@ def client():
 @pytest.fixture(autouse=True)
 def clean_before_and_after():
     def clean():
-        subprocess.Popen("lxc stop test-instance", shell=True).wait()
-        subprocess.Popen("lxc delete test-instance", shell=True).wait()
-        subprocess.Popen("lxc profile delete test-profile", shell=True).wait()
-        subprocess.Popen("lxc network delete test-network", shell=True).wait()
-        subprocess.Popen("lxc storage delete test-storage-pool", shell=True).wait()
+        subprocess.run("lxc stop test-instance", shell=True)
+        subprocess.run("lxc delete test-instance", shell=True)
+        subprocess.run("lxc profile delete test-profile", shell=True)
+        subprocess.run("lxc network delete test-network", shell=True)
+        subprocess.run("lxc storage delete test-storage-pool", shell=True)
 
     clean()
     yield  # see https://stackoverflow.com/questions/22627659/run-code-before-and-after-each-test-in-py-test
@@ -34,7 +34,7 @@ checking storage-pools/test-storage-pool
 
 def test_exists_storage_pool(client, capsys):
     assert not client.exists(Resource.STORAGE_POOLS, "test-storage-pool")
-    subprocess.Popen("lxc storage create test-storage-pool dir", shell=True).wait()
+    subprocess.run("lxc storage create test-storage-pool dir", shell=True)
     assert client.exists(Resource.STORAGE_POOLS, "test-storage-pool")
 
     assert capsys.readouterr().out == EXISTS_STORAGE_POOL_OUTPUT
@@ -48,7 +48,7 @@ checking networks/test-network
 
 def test_exists_network(client, capsys):
     assert not client.exists(Resource.NETWORKS, "test-network")
-    subprocess.Popen("lxc network create test-network", shell=True).wait()
+    subprocess.run("lxc network create test-network", shell=True)
     assert client.exists(Resource.NETWORKS, "test-network")
 
     assert capsys.readouterr().out == EXISTS_NETWORK_OUTPUT
@@ -62,7 +62,7 @@ checking profiles/test-profile
 
 def test_exists_profile(client, capsys):
     assert not client.exists(Resource.PROFILES, "test-profile")
-    subprocess.Popen("lxc profile create test-profile", shell=True).wait()
+    subprocess.run("lxc profile create test-profile", shell=True)
     assert client.exists(Resource.PROFILES, "test-profile")
 
     assert capsys.readouterr().out == EXISTS_PROFILE_OUTPUT
@@ -76,7 +76,7 @@ checking instances/test-instance
 
 def test_exists_instance(client, capsys):
     assert not client.exists(Resource.INSTANCES, "test-instance")
-    subprocess.Popen("lxc launch test-instance --empty", shell=True).wait()
+    subprocess.run("lxc launch test-instance --empty", shell=True)
     assert client.exists(Resource.INSTANCES, "test-instance")
 
     assert capsys.readouterr().out == EXISTS_INSTANCE_OUTPUT
@@ -238,7 +238,7 @@ def test_is_running(client, capsys):
     client.create(Resource.INSTANCES, {"name": "test-instance", "source": {"type": "image", "mode": "pull", "server": "https://cloud-images.ubuntu.com/releases", "protocol": "simplestreams", "alias": "focal"}})  # given
 
     assert not client.is_running("test-instance")
-    subprocess.Popen("lxc start test-instance", shell=True).wait()
+    subprocess.run("lxc start test-instance", shell=True)
     time.sleep(0.2)
     assert client.is_running("test-instance")
 

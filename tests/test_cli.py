@@ -15,11 +15,11 @@ def server():
 @pytest.fixture(autouse=True)
 def clean_before_and_after():
     def clean():
-        subprocess.Popen("lxc stop test-instance", shell=True).wait()
-        subprocess.Popen("lxc delete test-instance", shell=True).wait()
-        subprocess.Popen("lxc profile delete test-profile", shell=True).wait()
-        subprocess.Popen("lxc network delete test-network", shell=True).wait()
-        subprocess.Popen("lxc storage delete test-storage-pool", shell=True).wait()
+        subprocess.run("lxc stop test-instance", shell=True)
+        subprocess.run("lxc delete test-instance", shell=True)
+        subprocess.run("lxc profile delete test-profile", shell=True)
+        subprocess.run("lxc network delete test-network", shell=True)
+        subprocess.run("lxc storage delete test-storage-pool", shell=True)
 
     clean()
     yield  # see https://stackoverflow.com/questions/22627659/run-code-before-and-after-each-test-in-py-test
